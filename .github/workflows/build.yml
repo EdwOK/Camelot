@@ -16,10 +16,10 @@ jobs:
         dotnet-version: 3.1.101
     - name: Download Wix Toolset
       if: matrix.os == 'windows-latest'
-      run: curl -LS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe > wix311.exe
+      run: curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe
     - name: Install Wix Toolset
       if: matrix.os == 'windows-latest'
-      run: wix311.exe /install /quiet /norestart
+      run: ./wix311.exe /install /quiet /norestart
     - name: Set Wix Toolset in PATH 
       if: matrix.os == 'windows-latest'
       run: |
