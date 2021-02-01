@@ -16,11 +16,10 @@ jobs:
         dotnet-version: 3.1.101
     - name: Setup Wix Toolset
       if: matrix.os == 'windows-latest'
-      run: |
-        curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe
-        .\wix311.exe /install /quiet /norestart
-        $env:PATH = $env:PATH + ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
-        [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Machine)
+      run: curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe
+      run: .\wix311.exe /install /quiet /norestart
+      run: $env:PATH = $env:PATH + ";C:\Program Files (x86)\WiX Toolset v3.11\bin;"
+      run: [Environment]::SetEnvironmentVariable("Path", $env:PATH, [EnvironmentVariableTarget]::Machine)
     - name: Install dependencies
       run: dotnet restore
     - name: Build
