@@ -34,6 +34,6 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         cd src/Camelot.Install
-        msbuild -p:Configuration=Release
+        msbuild -p:Configuration=Release -p:platform=x64
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
