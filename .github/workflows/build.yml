@@ -14,11 +14,10 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.101
-    - name: Setup Wix Toolset
+    - name: Setup .NET Framework 3.5
       if: matrix.os == 'windows-latest'
-      run: |
-        curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe
-        ./wix311.exe /install /quiet /norestart
+      shell: pwsh
+      run: Install-WindowsFeature Net-Framework-Core
     - name: Install dependencies
       run: dotnet restore
     - name: Build
