@@ -14,6 +14,9 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.101
+    - name: Setup MSBuild
+      if: matrix.os == 'windows-latest'
+      uses: microsoft/setup-msbuild@v1.0.2
     - name: Setup .NET Framework 3.5
       if: matrix.os == 'windows-latest'
       shell: pwsh
@@ -26,6 +29,6 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         cd src/Camelot.Install
-        dotnet build --configuration Release --no-restore
+        msbuild -p:Configuration=Release
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
