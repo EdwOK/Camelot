@@ -10,6 +10,7 @@
     <OutputName>Camelot</OutputName>
     <OutputType>Package</OutputType>
     <Name>Camelot.Installer</Name>
+	<DefineSolutionProperties>false</DefineSolutionProperties>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
     <OutputPath>bin\$(Configuration)\</OutputPath>
