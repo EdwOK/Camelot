@@ -1,8 +1,5 @@
-using System;
 using System.IO;
-using System.Linq;
-using Camelot.Extensions;
-using Camelot.FileSystemWatcherWrapper.Interfaces;
+using Camelot.FileSystemWatcher.Interfaces;
 using Camelot.Services.Abstractions;
 using Moq;
 using Xunit;

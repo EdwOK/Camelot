@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Camelot.Extensions;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Drives;
 using Camelot.Services.Abstractions.Operations;
 using Camelot.Services.AllPlatforms;
 using Camelot.Services.Environment.Interfaces;
-using Camelot.Services.Linux.Builders;
+using Camelot.Services.Linux.Interfaces.Builders;
 
 namespace Camelot.Services.Linux
 {
@@ -15,24 +16,33 @@ namespace Camelot.Services.Linux
         private readonly IPathService _pathService;
         private readonly IFileService _fileService;
         private readonly IDirectoryService _directoryService;
+        private readonly IDateTimeProvider _dateTimeProvider;
+        private readonly ILinuxRemovedFileMetadataBuilderFactory _removedFileMetadataBuilderFactory;
+        private readonly IHomeDirectoryProvider _homeDirectoryProvider;
         private readonly IEnvironmentService _environmentService;
 
         public LinuxTrashCanService(
-            IDriveService driveService,
+            IMountedDriveService mountedDriveService,
             IOperationsService operationsService,
             IPathService pathService,
             IFileService fileService,
             IEnvironmentService environmentService,
-            IDirectoryService directoryService)
-            : base(driveService, operationsService, pathService, fileService)
+            IDirectoryService directoryService,
+            IDateTimeProvider dateTimeProvider,
+            ILinuxRemovedFileMetadataBuilderFactory removedFileMetadataBuilderFactory,
+            IHomeDirectoryProvider homeDirectoryProvider)
+            : base(mountedDriveService, operationsService, pathService)
         {
             _pathService = pathService;
             _fileService = fileService;
             _environmentService = environmentService;
             _directoryService = directoryService;
+            _dateTimeProvider = dateTimeProvider;
+            _removedFileMetadataBuilderFactory = removedFileMetadataBuilderFactory;
+            _homeDirectoryProvider = homeDirectoryProvider;
         }
 
-        protected override IReadOnlyCollection<string> GetTrashCanLocations(string volume)
+        protected override IReadOnlyList<string> GetTrashCanLocations(string volume)
         {
             var directories = new List<string>();
             if (volume != "/")
@@ -46,7 +56,7 @@ namespace Camelot.Services.Linux
         }
 
         protected override string GetFilesTrashCanLocation(string trashCanLocation) =>
-            $"{trashCanLocation}/files";
+            _pathService.Combine(trashCanLocation, "files");
 
         protected override async Task WriteMetaDataAsync(IReadOnlyDictionary<string, string> filePathsDictionary,
             string trashCanLocation)
@@ -57,20 +67,19 @@ namespace Camelot.Services.Linux
                 _directoryService.Create(infoTrashCanLocation);
             }
 
-            var deleteTime = _environmentService.Now;
+            var deleteTime = _dateTimeProvider.Now;
 
-            await filePathsDictionary.Keys.ForEachAsync(f => WriteMetaDataAsync(f, infoTrashCanLocation, deleteTime));
+            await filePathsDictionary.ForEachAsync(kvp =>
+                WriteMetaDataAsync(kvp.Key, kvp.Value, infoTrashCanLocation, deleteTime));
         }
 
-        protected override string GetUniqueFilePath(string file, HashSet<string> filesSet, string directory)
+        protected override string GetUniqueFilePath(string fileName, HashSet<string> filesNamesSet, string directory)
         {
-            var filePath = _pathService.Combine(directory, _pathService.GetFileName(file));
-            if (!filesSet.Contains(filePath))
+            var filePath = _pathService.Combine(directory, fileName);
+            if (!filesNamesSet.Contains(filePath) && !CheckIfExists(filePath))
             {
                 return filePath;
             }
-
-            var fileName = _pathService.GetFileName(file);
 
             string result;
             var i = 1;
@@ -79,50 +88,61 @@ namespace Camelot.Services.Linux
                 var newFileName = $"{fileName} ({i})";
                 result = _pathService.Combine(directory, newFileName);
                 i++;
-            } while (filesSet.Contains(result) || _fileService.CheckIfExists(result));
+            } while (filesNamesSet.Contains(result) || CheckIfExists(result));
 
             return result;
         }
 
-        private async Task WriteMetaDataAsync(string file, string trashCanMetadataLocation, DateTime dateTime)
+        private bool CheckIfExists(string nodePath) =>
+            _fileService.CheckIfExists(nodePath) || _directoryService.CheckIfExists(nodePath);
+
+        private async Task WriteMetaDataAsync(string oldFilePath, string newFilePath,
+            string trashCanMetadataLocation, DateTime dateTime)
         {
-            var fileName = _pathService.GetFileName(file);
+            var fileName = _pathService.GetFileName(newFilePath);
             var metadataFullPath = _pathService.Combine(trashCanMetadataLocation, fileName + ".trashinfo");
-            var metadata = GetMetadata(file, dateTime);
+            var metadata = GetMetadata(oldFilePath, dateTime);
 
             await _fileService.WriteTextAsync(metadataFullPath, metadata);
         }
 
-        private static string GetMetadata(string filePath, DateTime dateTime)
+        private string GetMetadata(string filePath, DateTime dateTime)
         {
-            var builder = new LinuxRemovedFileMetadataBuilder()
+            var builder = CreateBuilder()
                 .WithFilePath(filePath)
                 .WithRemovingDateTime(dateTime);
 
             return builder.Build();
         }
 
-        private static string GetInfoTrashCanLocation(string trashCanLocation) =>
-            $"{trashCanLocation}/info";
+        private ILinuxRemovedFileMetadataBuilder CreateBuilder() =>
+            _removedFileMetadataBuilderFactory.Create();
+
+        private string GetInfoTrashCanLocation(string trashCanLocation) =>
+            _pathService.Combine(trashCanLocation, "info");
 
         private string GetHomeTrashCanPath()
         {
             var xdgDataHome = _environmentService.GetEnvironmentVariable("XDG_DATA_HOME");
             if (xdgDataHome != null)
             {
-                return $"{xdgDataHome}/Trash/";
+                return _pathService.Combine(xdgDataHome, "Trash");
             }
 
-            var home = _environmentService.GetEnvironmentVariable("HOME");
+            var home = _homeDirectoryProvider.HomeDirectoryPath;
 
-            return $"{home}/.local/share/Trash";
+            return _pathService.Combine(home, ".local/share/Trash");
         }
 
-        private IReadOnlyCollection<string> GetVolumeTrashCanPaths(string volume)
+        private IReadOnlyList<string> GetVolumeTrashCanPaths(string volume)
         {
             var uid = GetUid();
 
-            return new[] {$"{volume}/.Trash-{uid}", $"{volume}/.Trash/{uid}"};
+            return new[]
+            {
+                _pathService.Combine(volume, $".Trash-{uid}"),
+                _pathService.Combine(volume, $".Trash/{uid}")
+            };
         }
 
         private string GetUid() => _environmentService.GetEnvironmentVariable("UID") ??

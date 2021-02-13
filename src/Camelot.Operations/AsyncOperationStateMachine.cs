@@ -1,17 +1,20 @@
 using System;
 using System.Threading.Tasks;
 using Camelot.Extensions;
+using Camelot.Services.Abstractions.Exceptions;
 using Camelot.Services.Abstractions.Extensions;
 using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.Services.Abstractions.Models.EventArgs;
 using Camelot.Services.Abstractions.Models.Operations;
 using Camelot.Services.Abstractions.Operations;
+using Microsoft.Extensions.Logging;
 
 namespace Camelot.Operations
 {
     public class AsyncOperationStateMachine : IOperation
     {
         private readonly ICompositeOperation _compositeOperation;
+        private readonly ILogger _logger;
 
         private OperationState _operationState;
 
@@ -42,9 +45,12 @@ namespace Camelot.Operations
             remove => _compositeOperation.ProgressChanged -= value;
         }
 
-        public AsyncOperationStateMachine(ICompositeOperation compositeOperation)
+        public AsyncOperationStateMachine(
+            ICompositeOperation compositeOperation,
+            ILogger logger)
         {
             _compositeOperation = compositeOperation;
+            _logger = logger;
 
             SubscribeToEvents();
         }
@@ -112,24 +118,35 @@ namespace Camelot.Operations
             await taskFactory();
         }
 
-        // TODO: change if successful?
         private Func<Task> WrapAsync(Func<Task> taskFactory,
             OperationState expectedState, OperationState requestedState) =>
             async () =>
             {
-                await taskFactory();
-                if (State == expectedState)
+                try
                 {
-                    await ChangeStateAsync(expectedState, requestedState);
+                    await taskFactory();
+                    if (State == expectedState)
+                    {
+                        await ChangeStateAsync(expectedState, requestedState);
+                    }
+                }
+                catch (OperationFailedException ex)
+                {
+                    _logger.LogError(
+                        $"{nameof(AsyncOperationStateMachine)} {nameof(OperationFailedException)} occurred: {ex}");
+
+                    await ChangeStateAsync(State, OperationState.Failed);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        $"{nameof(AsyncOperationStateMachine)} {nameof(Exception)} occurred: {ex}");
                 }
             };
 
         private static Task GetCompletedTask() => Task.CompletedTask;
 
-        private void SubscribeToEvents()
-        {
-            _compositeOperation.Blocked += CompositeOperationOnBlocked;
-        }
+        private void SubscribeToEvents() => _compositeOperation.Blocked += CompositeOperationOnBlocked;
 
         private async void CompositeOperationOnBlocked(object sender, EventArgs e) =>
             await ChangeStateAsync(OperationState.InProgress, OperationState.Blocked);

@@ -3,15 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using ApplicationDispatcher.Interfaces;
-using Camelot.DataAccess.Models;
+using Camelot.Avalonia.Interfaces;
 using Camelot.Extensions;
 using Camelot.Services.Abstractions;
-using Camelot.ViewModels.Configuration;
+using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.ViewModels.Factories.Interfaces;
+using Camelot.ViewModels.Interfaces.MainWindow;
 using Camelot.ViewModels.Interfaces.MainWindow.FilePanels;
 using DynamicData;
 using ReactiveUI;
@@ -22,27 +21,33 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
     {
         private readonly IFileService _fileService;
         private readonly IDirectoryService _directoryService;
-        private readonly IFilesSelectionService _filesSelectionService;
+        private readonly INodesSelectionService _nodesSelectionService;
         private readonly IFileSystemNodeViewModelFactory _fileSystemNodeViewModelFactory;
         private readonly IFileSystemWatchingService _fileSystemWatchingService;
         private readonly IApplicationDispatcher _applicationDispatcher;
-        private readonly IFilesPanelStateService _filesPanelStateService;
-        private readonly ITabViewModelFactory _tabViewModelFactory;
         private readonly IFileSizeFormatter _fileSizeFormatter;
         private readonly IClipboardOperationsService _clipboardOperationsService;
         private readonly IFileSystemNodeViewModelComparerFactory _comparerFactory;
 
         private readonly ObservableCollection<IFileSystemNodeViewModel> _fileSystemNodes;
         private readonly ObservableCollection<IFileSystemNodeViewModel> _selectedFileSystemNodes;
-        private readonly ObservableCollection<ITabViewModel> _tabs;
         private readonly object _locker;
 
         private string _currentDirectory;
-        private ITabViewModel _selectedTab;
 
         private IEnumerable<IFileViewModel> SelectedFiles => _selectedFileSystemNodes.OfType<IFileViewModel>();
 
         private IEnumerable<IDirectoryViewModel> SelectedDirectories => _selectedFileSystemNodes.OfType<IDirectoryViewModel>();
+
+        public ITabViewModel SelectedTab => TabsListViewModel.SelectedTab;
+
+        public ISearchViewModel SearchViewModel { get; }
+
+        public ITabsListViewModel TabsListViewModel { get; }
+
+        public IOperationsViewModel OperationsViewModel { get; }
+
+        public bool IsActive => SelectedTab.IsGloballyActive;
 
         public string CurrentDirectory
         {
@@ -84,17 +89,9 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
 
         public string SelectedFilesSize => _fileSizeFormatter.GetFormattedSize(SelectedFiles.Sum(f => f.Size));
 
-        public IEnumerable<ITabViewModel> Tabs => _tabs;
+        public event EventHandler<EventArgs> Activated;
 
-        public ITabViewModel SelectedTab
-        {
-            get => _selectedTab;
-            set => this.RaiseAndSetIfChanged(ref _selectedTab, value);
-        }
-
-        public event EventHandler<EventArgs> ActivatedEvent;
-
-        public event EventHandler<EventArgs> DeactivatedEvent;
+        public event EventHandler<EventArgs> Deactivated;
 
         public event EventHandler<EventArgs> CurrentDirectoryChanged;
 
@@ -111,28 +108,30 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
         public FilesPanelViewModel(
             IFileService fileService,
             IDirectoryService directoryService,
-            IFilesSelectionService filesSelectionService,
+            INodesSelectionService nodesSelectionService,
             IFileSystemNodeViewModelFactory fileSystemNodeViewModelFactory,
             IFileSystemWatchingService fileSystemWatchingService,
             IApplicationDispatcher applicationDispatcher,
-            IFilesPanelStateService filesPanelStateService,
-            ITabViewModelFactory tabViewModelFactory,
             IFileSizeFormatter fileSizeFormatter,
             IClipboardOperationsService clipboardOperationsService,
             IFileSystemNodeViewModelComparerFactory comparerFactory,
-            FilePanelConfiguration filePanelConfiguration)
+            ISearchViewModel searchViewModel,
+            ITabsListViewModel tabsListViewModel,
+            IOperationsViewModel operationsViewModel)
         {
             _fileService = fileService;
             _directoryService = directoryService;
-            _filesSelectionService = filesSelectionService;
+            _nodesSelectionService = nodesSelectionService;
             _fileSystemNodeViewModelFactory = fileSystemNodeViewModelFactory;
             _fileSystemWatchingService = fileSystemWatchingService;
             _applicationDispatcher = applicationDispatcher;
-            _filesPanelStateService = filesPanelStateService;
-            _tabViewModelFactory = tabViewModelFactory;
             _fileSizeFormatter = fileSizeFormatter;
             _clipboardOperationsService = clipboardOperationsService;
             _comparerFactory = comparerFactory;
+
+            SearchViewModel = searchViewModel;
+            TabsListViewModel = tabsListViewModel;
+            OperationsViewModel = operationsViewModel;
 
             _fileSystemNodes = new ObservableCollection<IFileSystemNodeViewModel>();
             _selectedFileSystemNodes = new ObservableCollection<IFileSystemNodeViewModel>();
@@ -140,22 +139,17 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
 
             ActivateCommand = ReactiveCommand.Create(Activate);
             RefreshCommand = ReactiveCommand.Create(ReloadFiles);
-            SortFilesCommand = ReactiveCommand.Create<SortingColumn>(SortFiles);
+            SortFilesCommand = ReactiveCommand.Create<SortingMode>(SortFiles);
             CopyToClipboardCommand = ReactiveCommand.CreateFromTask(CopyToClipboardAsync);
             PasteFromClipboardCommand = ReactiveCommand.CreateFromTask(PasteFromClipboardAsync);
 
-            _tabs = SetupTabs();
-
-            this.WhenAnyValue(x => x.CurrentDirectory, x => x.SelectedTab)
-                .Throttle(TimeSpan.FromMilliseconds(filePanelConfiguration.SaveTimeoutMs))
-                .Subscribe(_ => SaveState());
-
             SubscribeToEvents();
+            CurrentDirectory = SelectedTab.CurrentDirectory;
         }
 
         public void Activate()
         {
-            ActivatedEvent.Raise(this, EventArgs.Empty);
+            Activated.Raise(this, EventArgs.Empty);
 
             SelectedTab.IsGloballyActive = true;
         }
@@ -164,155 +158,39 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
         {
             var selectedFiles = SelectedFileSystemNodes.Select(f => f.FullPath).ToArray();
             SelectedFileSystemNodes.Clear();
-            _filesSelectionService.UnselectFiles(selectedFiles);
+            _nodesSelectionService.UnselectNodes(selectedFiles);
 
-            DeactivatedEvent.Raise(this, EventArgs.Empty);
+            Deactivated.Raise(this, EventArgs.Empty);
 
             SelectedTab.IsGloballyActive = false;
         }
 
-        public void CreateNewTab() => CreateNewTab(SelectedTab);
-
-        public void CloseActiveTab() => CloseTab(SelectedTab);
-
         public void OpenLastSelectedFile()
         {
-            var lastSelected = _selectedFileSystemNodes.Last();
+            var lastSelected = _selectedFileSystemNodes.LastOrDefault();
 
-            lastSelected.OpenCommand.Execute(null);
+            lastSelected?.OpenCommand.Execute(null);
         }
 
-        private void SortFiles(SortingColumn sortingColumn)
+        private void SortFiles(SortingMode sortingMode)
         {
-            if (SelectedTab.SortingViewModel.SortingColumn == sortingColumn)
+            if (SelectedTab.SortingViewModel.SortingColumn == sortingMode)
             {
                 SelectedTab.SortingViewModel.ToggleSortingDirection();
             }
             else
             {
-                SelectedTab.SortingViewModel.SortingColumn = sortingColumn;
+                SelectedTab.SortingViewModel.SortingColumn = sortingMode;
             }
 
             ReloadFiles();
-            SaveState();
-        }
-
-        private void TabsOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e) => SaveState();
-
-        private ITabViewModel Create(string directory)
-        {
-            var tabModel = new TabModel
-            {
-                Directory = directory,
-                SortingSettings = GetSortingSettings(SelectedTab)
-            };
-
-            return Create(tabModel);
-        }
-
-        private ITabViewModel Create(TabModel tabModel)
-        {
-            var tabViewModel = _tabViewModelFactory.Create(tabModel);
-            SubscribeToEvents(tabViewModel);
-
-            return tabViewModel;
-        }
-
-        private void Remove(ITabViewModel tabViewModel)
-        {
-            UnsubscribeFromEvents(tabViewModel);
-
-            _tabs.Remove(tabViewModel);
-
-            if (SelectedTab == tabViewModel)
-            {
-                SelectTab(_tabs.First());
-            }
-        }
-
-        private void SubscribeToEvents(ITabViewModel tabViewModel)
-        {
-            tabViewModel.ActivationRequested += TabViewModelOnActivationRequested;
-            tabViewModel.NewTabRequested += TabViewModelOnNewTabRequested;
-            tabViewModel.CloseRequested += TabViewModelOnCloseRequested;
-            tabViewModel.ClosingTabsToTheLeftRequested += TabViewModelOnClosingTabsToTheLeftRequested;
-            tabViewModel.ClosingTabsToTheRightRequested += TabViewModelOnClosingTabsToTheRightRequested;
-            tabViewModel.ClosingAllTabsButThisRequested += TabViewModelOnClosingAllTabsButThisRequested;
-        }
-
-        private void UnsubscribeFromEvents(ITabViewModel tabViewModel)
-        {
-            tabViewModel.ActivationRequested -= TabViewModelOnActivationRequested;
-            tabViewModel.NewTabRequested -= TabViewModelOnNewTabRequested;
-            tabViewModel.CloseRequested -= TabViewModelOnCloseRequested;
-            tabViewModel.ClosingTabsToTheLeftRequested -= TabViewModelOnClosingTabsToTheLeftRequested;
-            tabViewModel.ClosingTabsToTheRightRequested -= TabViewModelOnClosingTabsToTheRightRequested;
-            tabViewModel.ClosingAllTabsButThisRequested -= TabViewModelOnClosingAllTabsButThisRequested;
-        }
-
-        private void TabViewModelOnActivationRequested(object sender, EventArgs e) => SelectTab((ITabViewModel) sender);
-
-        private void TabViewModelOnNewTabRequested(object sender, EventArgs e) => CreateNewTab((ITabViewModel) sender);
-
-        private void TabViewModelOnCloseRequested(object sender, EventArgs e) => CloseTab((ITabViewModel) sender);
-
-        private void TabViewModelOnClosingTabsToTheLeftRequested(object sender, EventArgs e)
-        {
-            var tabViewModel = (ITabViewModel) sender;
-            var tabPosition = _tabs.IndexOf(tabViewModel);
-            var tabsToClose = _tabs.Take(tabPosition).ToArray();
-
-            tabsToClose.ForEach(Remove);
-        }
-
-        private void TabViewModelOnClosingTabsToTheRightRequested(object sender, EventArgs e)
-        {
-            var tabViewModel = (ITabViewModel) sender;
-            var tabPosition = _tabs.IndexOf(tabViewModel);
-            var tabsToClose = _tabs.Skip(tabPosition + 1).ToArray();
-
-            tabsToClose.ForEach(Remove);
-        }
-
-        private void TabViewModelOnClosingAllTabsButThisRequested(object sender, EventArgs e)
-        {
-            var tabViewModel = (ITabViewModel) sender;
-            var tabsToClose = _tabs.Where(t => t != tabViewModel).ToArray();
-
-            tabsToClose.ForEach(Remove);
-        }
-
-        private void CreateNewTab(ITabViewModel tabViewModel)
-        {
-            var tabPosition = _tabs.IndexOf(tabViewModel);
-            var newTabViewModel = Create(tabViewModel.CurrentDirectory);
-
-            _tabs.Insert(tabPosition, newTabViewModel);
-        }
-
-        private void CloseTab(ITabViewModel tabViewModel)
-        {
-            if (_tabs.Count > 1)
-            {
-                Remove(tabViewModel);
-            }
-        }
-
-        private void SelectTab(ITabViewModel tabViewModel)
-        {
-            if (SelectedTab != null)
-            {
-                SelectedTab.IsActive = SelectedTab.IsGloballyActive = false;
-            }
-
-            tabViewModel.IsActive = tabViewModel.IsGloballyActive = true;
-            SelectedTab = tabViewModel;
-
-            CurrentDirectory = tabViewModel.CurrentDirectory;
+            TabsListViewModel.SaveState();
         }
 
         private void SubscribeToEvents()
         {
+            TabsListViewModel.SelectedTabChanged += TabsListViewModelOnSelectedTabChanged;
+            SearchViewModel.SearchSettingsChanged += SearchViewModelOnSearchSettingsChanged;
             _selectedFileSystemNodes.CollectionChanged += SelectedFileSystemNodesOnCollectionChanged;
 
             void ExecuteInUiThread(Action action) => _applicationDispatcher.Dispatch(action);
@@ -337,6 +215,15 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
                 ExecuteSynchronized(() => RemoveNode(args.Node));
         }
 
+        private void TabsListViewModelOnSelectedTabChanged(object sender, EventArgs e)
+        {
+            CurrentDirectory = SelectedTab.CurrentDirectory;
+            this.RaisePropertyChanged(nameof(SelectedTab));
+        }
+
+        private void SearchViewModelOnSearchSettingsChanged(object sender, EventArgs e) =>
+            _applicationDispatcher.Dispatch(ReloadFiles);
+
         private void RenameNode(string oldName, string newName)
         {
             RemoveNode(oldName);
@@ -345,7 +232,7 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
 
         private void InsertNode(string nodePath)
         {
-            var newNodeModel = CreateFrom(nodePath);
+            var newNodeModel = _fileSystemNodeViewModelFactory.Create(nodePath);
             if (newNodeModel is null)
             {
                 return;
@@ -377,8 +264,9 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
                 return;
             }
 
-            var directories = _directoryService.GetChildDirectories(CurrentDirectory);
-            var files = _fileService.GetFiles(CurrentDirectory);
+            var specification = SearchViewModel.GetSpecification();
+            var directories = _directoryService.GetChildDirectories(CurrentDirectory, specification);
+            var files = _fileService.GetFiles(CurrentDirectory, specification);
 
             var directoriesViewModels = directories
                 .Select(d => _fileSystemNodeViewModelFactory.Create(d));
@@ -409,7 +297,7 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
                 .Select(f => f.FullPath);
             if (nodesToAdd != null)
             {
-                _filesSelectionService.SelectFiles(nodesToAdd);
+                _nodesSelectionService.SelectNodes(nodesToAdd);
             }
 
             var nodesToRemove = e.OldItems?
@@ -417,7 +305,7 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
                 .Select(f => f.FullPath);
             if (nodesToRemove != null)
             {
-                _filesSelectionService.UnselectFiles(nodesToRemove);
+                _nodesSelectionService.UnselectNodes(nodesToRemove);
             }
 
             this.RaisePropertyChanged(nameof(SelectedFilesCount));
@@ -426,84 +314,11 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
             this.RaisePropertyChanged(nameof(AreAnyFileSystemNodesSelected));
         }
 
-        private void SaveState() =>
-            Task.Factory.StartNew(() =>
-            {
-                var tabs = _tabs.Select(CreateFrom).ToList();
-                var selectedTabIndex = _tabs.IndexOf(_selectedTab);
-                var state = new PanelModel
-                {
-                    Tabs = tabs,
-                    SelectedTabIndex = selectedTabIndex
-                };
-
-                _filesPanelStateService.SavePanelState(state);
-            }, TaskCreationOptions.LongRunning);
-
-        private static TabModel CreateFrom(ITabViewModel tabViewModel) =>
-            new TabModel
-            {
-                Directory = tabViewModel.CurrentDirectory,
-                SortingSettings = GetSortingSettings(tabViewModel)
-            };
-
-        private IFileSystemNodeViewModel CreateFrom(string path)
-        {
-            if (_fileService.CheckIfExists(path))
-            {
-                var fileModel = _fileService.GetFile(path);
-
-                return _fileSystemNodeViewModelFactory.Create(fileModel);
-            }
-
-            if (_directoryService.CheckIfExists(path))
-            {
-                var directoryModel = _directoryService.GetDirectory(path);
-
-                return _fileSystemNodeViewModelFactory.Create(directoryModel);
-            }
-
-            return null;
-        }
-
-        private static SortingSettings GetSortingSettings(ITabViewModel tabViewModel) =>
-            new SortingSettings
-            {
-                IsAscending = tabViewModel.SortingViewModel.IsSortingByAscendingEnabled,
-                SortingMode = (int) tabViewModel.SortingViewModel.SortingColumn
-            };
-
         private Task CopyToClipboardAsync() =>
-            _clipboardOperationsService.CopyFilesAsync(_filesSelectionService.SelectedFiles);
+            _clipboardOperationsService.CopyFilesAsync(_nodesSelectionService.SelectedNodes);
 
         private Task PasteFromClipboardAsync() =>
             _clipboardOperationsService.PasteFilesAsync(CurrentDirectory);
-
-        private List<TabModel> GetDefaultTabs()
-        {
-            var rootDirectoryTab = new TabModel
-            {
-                Directory = _directoryService.GetAppRootDirectory()
-            };
-
-            return new List<TabModel> {rootDirectoryTab};
-        }
-
-        private ObservableCollection<ITabViewModel> SetupTabs()
-        {
-            var state = _filesPanelStateService.GetPanelState();
-            if (!state.Tabs.Any())
-            {
-                state.Tabs = GetDefaultTabs();
-            }
-
-            var tabs = GetInitialTabs(state.Tabs);
-            tabs.CollectionChanged += TabsOnCollectionChanged;
-
-            SelectTab(tabs[state.SelectedTabIndex]);
-
-            return tabs;
-        }
 
         private int GetInsertIndex(IFileSystemNodeViewModel newNodeViewModel)
         {
@@ -517,15 +332,6 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
             _comparerFactory.Create(SelectedTab.SortingViewModel);
 
         private IFileSystemNodeViewModel GetViewModel(string nodePath) =>
-            _fileSystemNodes.SingleOrDefault(n => n.FullPath == nodePath);
-
-        private ObservableCollection<ITabViewModel> GetInitialTabs(IEnumerable<TabModel> tabModels)
-        {
-            var tabs = tabModels
-                .Where(tm => _directoryService.CheckIfExists(tm.Directory))
-                .Select(Create);
-
-            return new ObservableCollection<ITabViewModel>(tabs);
-        }
+            _fileSystemNodes.FirstOrDefault(n => n.FullPath == nodePath);
     }
 }

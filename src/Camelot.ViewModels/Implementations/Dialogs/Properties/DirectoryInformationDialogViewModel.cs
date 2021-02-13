@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using ApplicationDispatcher.Interfaces;
+using Camelot.Avalonia.Interfaces;
 using Camelot.Services.Abstractions;
 using Camelot.Services.Abstractions.Models;
 using Camelot.ViewModels.Implementations.Dialogs.NavigationParameters;
@@ -39,13 +39,11 @@ namespace Camelot.ViewModels.Implementations.Dialogs.Properties
             MainNodeInfoTabViewModel.Activate(directoryModel, true);
         }
 
-        private void LoadDirectorySize(string directory)
-        {
+        private void LoadDirectorySize(string directory) =>
             Task
                 .Factory
                 .StartNew(() => _directoryService.CalculateSize(directory))
                 .ContinueWith(t => SetSize(t.Result));
-        }
 
         private void SetSize(long size) =>
             _applicationDispatcher.Dispatch(() => MainNodeInfoTabViewModel.SetSize(size));

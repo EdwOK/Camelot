@@ -6,12 +6,18 @@ using Camelot.Extensions;
 using Camelot.Services.Abstractions;
 using Camelot.Services.Abstractions.Models;
 using Camelot.Services.Abstractions.Models.EventArgs;
+using Camelot.Services.Abstractions.Specifications;
+using Camelot.Services.Environment.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Camelot.Services
 {
     public class DirectoryService : IDirectoryService
     {
         private readonly IPathService _pathService;
+        private readonly IEnvironmentDirectoryService _environmentDirectoryService;
+        private readonly IEnvironmentFileService _environmentFileService;
+        private readonly ILogger _logger;
 
         private string _directory;
 
@@ -34,24 +40,28 @@ namespace Camelot.Services
 
         public event EventHandler<SelectedDirectoryChangedEventArgs> SelectedDirectoryChanged;
 
-        public DirectoryService(IPathService pathService)
+        public DirectoryService(
+            IPathService pathService,
+            IEnvironmentDirectoryService environmentDirectoryService,
+            IEnvironmentFileService environmentFileService,
+            ILogger logger)
         {
             _pathService = pathService;
+            _environmentDirectoryService = environmentDirectoryService;
+            _environmentFileService = environmentFileService;
+            _logger = logger;
         }
 
         public bool Create(string directory)
         {
-            if (string.IsNullOrWhiteSpace(directory))
-            {
-                return false;
-            }
-
             try
             {
-                Directory.CreateDirectory(directory);
+                _environmentDirectoryService.CreateDirectory(directory);
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError($"Failed to create directory {directory} with error {ex}");
+
                 return false;
             }
 
@@ -59,66 +69,102 @@ namespace Camelot.Services
         }
 
         public long CalculateSize(string directory) =>
-            Directory
-                .EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
-                .Sum(f => new FileInfo(f).Length);
+            _environmentDirectoryService
+                .EnumerateFilesRecursively(directory)
+                .Sum(GetFileSize);
 
         public DirectoryModel GetDirectory(string directory) => CreateFrom(directory);
 
         public DirectoryModel GetParentDirectory(string directory)
         {
-            var parentDirectory = new DirectoryInfo(directory).Parent;
+            var parentDirectory = _environmentDirectoryService.GetDirectory(directory).Parent;
 
             return parentDirectory is null ? null : CreateFrom(parentDirectory);
         }
 
-        public IReadOnlyCollection<DirectoryModel> GetDirectories(IReadOnlyCollection<string> directories) =>
-            directories.Select(CreateFrom).ToArray();
-
-        public IReadOnlyCollection<DirectoryModel> GetChildDirectories(string directory)
-        {
-            var directories = Directory
+        public IReadOnlyList<DirectoryModel> GetChildDirectories(string directory, ISpecification<DirectoryModel> specification = null) =>
+            _environmentDirectoryService
                 .GetDirectories(directory)
-                .Select(CreateFrom);
-
-            return directories.ToArray();
-        }
-
-        public bool CheckIfExists(string directory) => Directory.Exists(directory);
-
-        public string GetAppRootDirectory() => _pathService.GetPathRoot(Directory.GetCurrentDirectory());
-
-        public IReadOnlyCollection<string> GetFilesRecursively(string directory) => Directory
-                .EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+                .Select(CreateFrom)
+                .Where(d => specification?.IsSatisfiedBy(d) ?? true)
                 .ToArray();
 
-        public void RemoveRecursively(string directory) => Directory.Delete(directory, true);
+        public IReadOnlyList<string> GetEmptyDirectoriesRecursively(string directory)
+        {
+            if (CheckIfEmpty(directory))
+            {
+                return new[] {directory};
+            }
+
+            var directories = GetDirectoriesRecursively(directory);
+
+            return directories.Where(CheckIfEmpty).ToArray();
+        }
+
+        public bool CheckIfExists(string directory) =>
+            _environmentDirectoryService.CheckIfExists(directory);
+
+        public string GetAppRootDirectory() =>
+            _pathService.GetPathRoot(_environmentDirectoryService.GetCurrentDirectory());
+
+        public IReadOnlyList<string> GetFilesRecursively(string directory) =>
+            _environmentDirectoryService
+                .EnumerateFilesRecursively(directory)
+                .ToArray();
+
+        public IReadOnlyList<string> GetDirectoriesRecursively(string directory) =>
+            _environmentDirectoryService
+                .EnumerateDirectoriesRecursively(directory)
+                .ToArray();
+
+        public bool RemoveRecursively(string directory)
+        {
+            try
+            {
+                _environmentDirectoryService.Delete(directory, true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to delete directory {directory} with error {ex}");
+
+                return false;
+            }
+
+            return true;
+        }
 
         public bool Rename(string directoryPath, string newName)
         {
             var parentDirectory = _pathService.GetParentDirectory(directoryPath);
             var newDirectoryPath = _pathService.Combine(parentDirectory, newName);
-            if (directoryPath == newDirectoryPath)
+
+            try
             {
+                _environmentDirectoryService.Move(directoryPath, newDirectoryPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    $"Failed to rename directory {directoryPath} to {newName} with error {ex}");
+
                 return false;
             }
-
-            if (CheckIfExists(newDirectoryPath))
-            {
-                return false;
-            }
-
-            Directory.Move(directoryPath, newDirectoryPath);
 
             return true;
         }
 
-        private static DirectoryModel CreateFrom(string directory)
+        private bool CheckIfEmpty(string directory) =>
+            !_environmentDirectoryService.EnumerateFileSystemEntriesRecursively(directory).Any();
+
+        private DirectoryModel CreateFrom(string directory)
         {
-            var directoryInfo = new DirectoryInfo(directory);
+            var directoryInfo = _environmentDirectoryService.GetDirectory(directory);
 
             return CreateFrom(directoryInfo);
         }
+
+        private long GetFileSize(string file) =>
+            _environmentFileService.GetFile(file).Length;
 
         private static DirectoryModel CreateFrom(FileSystemInfo directoryInfo) =>
             new DirectoryModel

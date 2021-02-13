@@ -536,5 +536,233 @@ namespace Camelot.Properties {
                 return ResourceManager.GetString("Terminal", resourceCulture);
             }
         }
+        
+        public static string Search {
+            get {
+                return ResourceManager.GetString("Search", resourceCulture);
+            }
+        }
+        
+        public static string SearchForFilesAndDirectories {
+            get {
+                return ResourceManager.GetString("SearchForFilesAndDirectories", resourceCulture);
+            }
+        }
+        
+        public static string InvalidRegex {
+            get {
+                return ResourceManager.GetString("InvalidRegex", resourceCulture);
+            }
+        }
+        
+        public static string TotalSpaceWithColon {
+            get {
+                return ResourceManager.GetString("TotalSpaceWithColon", resourceCulture);
+            }
+        }
+        
+        public static string AvailableSpaceWithColon {
+            get {
+                return ResourceManager.GetString("AvailableSpaceWithColon", resourceCulture);
+            }
+        }
+        
+        public static string File {
+            get {
+                return ResourceManager.GetString("File", resourceCulture);
+            }
+        }
+        
+        public static string CreateFileTitle {
+            get {
+                return ResourceManager.GetString("CreateFileTitle", resourceCulture);
+            }
+        }
+        
+        public static string EnterFileNameWithColon {
+            get {
+                return ResourceManager.GetString("EnterFileNameWithColon", resourceCulture);
+            }
+        }
+        
+        public static string ClickToMount {
+            get {
+                return ResourceManager.GetString("ClickToMount", resourceCulture);
+            }
+        }
+        
+        public static string Pack {
+            get {
+                return ResourceManager.GetString("Pack", resourceCulture);
+            }
+        }
+        
+        public static string Extract {
+            get {
+                return ResourceManager.GetString("Extract", resourceCulture);
+            }
+        }
+        
+        public static string ExtractingArchiveTo {
+            get {
+                return ResourceManager.GetString("ExtractingArchiveTo", resourceCulture);
+            }
+        }
+        
+        public static string PackingFilesAndDirectoriesTo {
+            get {
+                return ResourceManager.GetString("PackingFilesAndDirectoriesTo", resourceCulture);
+            }
+        }
+        
+        public static string PackingFileTo {
+            get {
+                return ResourceManager.GetString("PackingFileTo", resourceCulture);
+            }
+        }
+        
+        public static string ExtractedArchiveTo {
+            get {
+                return ResourceManager.GetString("ExtractedArchiveTo", resourceCulture);
+            }
+        }
+        
+        public static string PackedFileTo {
+            get {
+                return ResourceManager.GetString("PackedFileTo", resourceCulture);
+            }
+        }
+        
+        public static string PackedFilesAndDirectoriesTo {
+            get {
+                return ResourceManager.GetString("PackedFilesAndDirectoriesTo", resourceCulture);
+            }
+        }
+        
+        public static string ExtractArchiveHere {
+            get {
+                return ResourceManager.GetString("ExtractArchiveHere", resourceCulture);
+            }
+        }
+        
+        public static string ExtractArchiveToNewDirectory {
+            get {
+                return ResourceManager.GetString("ExtractArchiveToNewDirectory", resourceCulture);
+            }
+        }
+        
+        public static string SelectDirectoryForExtraction {
+            get {
+                return ResourceManager.GetString("SelectDirectoryForExtraction", resourceCulture);
+            }
+        }
+        
+        public static string PackFilesTitle {
+            get {
+                return ResourceManager.GetString("PackFilesTitle", resourceCulture);
+            }
+        }
+        
+        public static string PackToTheFileWithColon {
+            get {
+                return ResourceManager.GetString("PackToTheFileWithColon", resourceCulture);
+            }
+        }
+        
+        public static string CreateArchive {
+            get {
+                return ResourceManager.GetString("CreateArchive", resourceCulture);
+            }
+        }
+        
+        public static string FailedToExtractArchiveTo {
+            get {
+                return ResourceManager.GetString("FailedToExtractArchiveTo", resourceCulture);
+            }
+        }
+        
+        public static string FailedToPackTo {
+            get {
+                return ResourceManager.GetString("FailedToPackTo", resourceCulture);
+            }
+        }
+        
+        public static string FailedToPackFilesAndDirectoriesTo {
+            get {
+                return ResourceManager.GetString("FailedToPackFilesAndDirectoriesTo", resourceCulture);
+            }
+        }
+        
+        public static string OpenWith {
+            get {
+                return ResourceManager.GetString("OpenWith", resourceCulture);
+            }
+        }
+        
+        public static string OpenWithTitle {
+            get {
+                return ResourceManager.GetString("OpenWithTitle", resourceCulture);
+            }
+        }
+        
+        public static string OpeningFiles {
+            get {
+                return ResourceManager.GetString("OpeningFiles", resourceCulture);
+            }
+        }
+        
+        public static string RecommendedApplications {
+            get {
+                return ResourceManager.GetString("RecommendedApplications", resourceCulture);
+            }
+        }
+        
+        public static string SelectOtherApplications {
+            get {
+                return ResourceManager.GetString("SelectOtherApplications", resourceCulture);
+            }
+        }
+        
+        public static string Select {
+            get {
+                return ResourceManager.GetString("Select", resourceCulture);
+            }
+        }
+        
+        public static string SetAsDefaultApplication {
+            get {
+                return ResourceManager.GetString("SetAsDefaultApplication", resourceCulture);
+            }
+        }
+        
+        public static string SearchForApplications {
+            get {
+                return ResourceManager.GetString("SearchForApplications", resourceCulture);
+            }
+        }
+        
+        public static string EnterNewNameWithColon {
+            get {
+                return ResourceManager.GetString("EnterNewNameWithColon", resourceCulture);
+            }
+        }
+        
+        public static string ThemeWithColon {
+            get {
+                return ResourceManager.GetString("ThemeWithColon", resourceCulture);
+            }
+        }
+        
+        public static string DarkThemeName {
+            get {
+                return ResourceManager.GetString("DarkThemeName", resourceCulture);
+            }
+        }
+        
+        public static string LightThemeName {
+            get {
+                return ResourceManager.GetString("LightThemeName", resourceCulture);
+            }
+        }
     }
 }

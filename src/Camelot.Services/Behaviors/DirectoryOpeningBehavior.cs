@@ -6,13 +6,19 @@ namespace Camelot.Services.Behaviors
     public class DirectoryOpeningBehavior : IFileSystemNodeOpeningBehavior
     {
         private readonly IDirectoryService _directoryService;
+        private readonly IResourceOpeningService _resourceOpeningService;
 
         public DirectoryOpeningBehavior(
-            IDirectoryService directoryService)
+            IDirectoryService directoryService,
+            IResourceOpeningService resourceOpeningService)
         {
             _directoryService = directoryService;
+            _resourceOpeningService = resourceOpeningService;
         }
 
-        public void Open(string directory) => _directoryService.SelectedDirectory = directory;
+        public void Open(string node) => _directoryService.SelectedDirectory = node;
+
+        public void OpenWith(string command, string arguments, string node) =>
+            _resourceOpeningService.OpenWith(command, arguments, node);
     }
 }

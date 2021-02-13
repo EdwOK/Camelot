@@ -1,11 +1,14 @@
-using Avalonia;
+using System;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Camelot.DependencyInjection;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.Styles.Themes;
 using Camelot.ViewModels.Implementations;
 using Camelot.Views;
 using Splat;
+using Application = Avalonia.Application;
 
 namespace Camelot
 {
@@ -14,8 +17,8 @@ namespace Camelot
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
-            LoadTheme();
-            LoadLanguage();
+
+            LoadSettings();
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -24,29 +27,48 @@ namespace Camelot
             {
                 desktop.MainWindow = new MainWindow
                 {
-                    DataContext = Locator.Current.GetService<MainWindowViewModel>()
+                    DataContext = GetRequiredService<MainWindowViewModel>()
                 };
             }
 
             base.OnFrameworkInitializationCompleted();
         }
 
-        private void LoadTheme()
+        private void LoadSettings()
         {
-            // TODO: load themes on start from db
-            Styles.Add(new DarkTheme());
+            LoadTheme();
+            LoadLanguage();
         }
 
-        private void LoadLanguage()
+        private void LoadTheme()
         {
-            var localizationService = Locator.Current.GetService<ILocalizationService>();
-            var languageManager = Locator.Current.GetService<ILanguageManager>();
+            var themeService = GetRequiredService<IThemeService>();
+            var selectedTheme = themeService.GetCurrentTheme();
 
-            var savedLanguage = localizationService.GetSavedLanguage();
-            if (savedLanguage != null)
+            switch (selectedTheme)
             {
+                case Theme.Dark:
+                    Styles.Add(new DarkTheme());
+                    break;
+                case Theme.Light:
+                    Styles.Add(new LightTheme());
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(selectedTheme), selectedTheme, null);
+            }
+        }
+
+        private static void LoadLanguage()
+        {
+            var localizationService = GetRequiredService<ILocalizationService>();
+            if (localizationService.GetSavedLanguage() is { } savedLanguage)
+            {
+                var languageManager = GetRequiredService<ILanguageManager>();
+
                 languageManager.SetLanguage(savedLanguage.Code);
             }
         }
+
+        private static T GetRequiredService<T>() => Locator.Current.GetRequiredService<T>();
     }
 }

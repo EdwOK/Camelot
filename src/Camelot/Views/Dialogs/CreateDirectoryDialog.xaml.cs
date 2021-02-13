@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Camelot.ViewModels.Implementations.Dialogs;
 using Camelot.ViewModels.Implementations.Dialogs.Results;
 
 namespace Camelot.Views.Dialogs
@@ -13,10 +15,21 @@ namespace Camelot.Views.Dialogs
 
         protected override void OnOpened()
         {
-            var textBox = this.FindControl<TextBox>("DirectoryNameTextBox");
+            var textBox = this.FindControl<TextBox>("NodeNameTextBox");
             textBox.Focus();
 
             base.OnOpened();
+        }
+
+        private void OnNodeNameTextBoxKeyUp(object sender, KeyEventArgs args)
+        {
+            if (args.Key is Key.Enter)
+            {
+                args.Handled = true;
+
+                var viewModel = (CreateDirectoryDialogViewModel) ViewModel;
+                viewModel.CreateCommand.Execute(null);
+            }
         }
 
         private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

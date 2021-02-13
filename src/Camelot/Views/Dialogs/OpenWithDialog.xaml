@@ -1,0 +1,111 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:p="clr-namespace:Camelot.Properties"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		xmlns:dialogs="clr-namespace:Camelot.ViewModels.Implementations.Dialogs;assembly=Camelot.ViewModels"
+		xmlns:openWith="clr-namespace:Camelot.Views.Dialogs.OpenWith"
+		Width="850" Height="580"
+		x:Class="Camelot.Views.Dialogs.OpenWithDialog"
+		Title="{x:Static p:Resources.OpenWithTitle}">
+
+	<Design.DataContext>
+		<dialogs:OpenWithDialogViewModel />
+	</Design.DataContext>
+
+	<Border Padding="20">
+		<Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="*,*">
+			<StackPanel Orientation="Horizontal" Grid.ColumnSpan="2">
+				<Image Width="25" Height="25">
+					<Image.Source>
+						<DrawingImage>
+							<DrawingImage.Drawing>
+								<GeometryDrawing Brush="{DynamicResource AlternativeThemeForegroundBrush}"
+								                 Geometry="M224 136V0H24C10.7 0 0 10.7 0 24v464c0 13.3 10.7 24 24 24h336c13.3 0 24-10.7 24-24V160H248c-13.2 0-24-10.8-24-24zm160-14.1v6.1H256V0h6.1c6.4 0 12.5 2.5 17 7l97.9 98c4.5 4.5 7 10.6 7 16.9z" />
+							</DrawingImage.Drawing>
+						</DrawingImage>
+					</Image.Source>
+				</Image>
+
+				<TextBlock Classes="boldStyleTextBlock dialogTitleTextBlock">
+					<TextBlock.Text>
+						<MultiBinding StringFormat="{x:Static p:Resources.OpeningFiles}">
+                            <Binding Path="OpenFileExtension" />
+                        </MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</StackPanel>
+
+	        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,15" Classes="openWithDialogTextBlock"
+					   IsVisible="{Binding RecommendedApplications.Count}"
+                       Text="{x:Static p:Resources.RecommendedApplications}" />
+
+			<ListBox Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0" MaxHeight="120"
+					 IsVisible="{Binding RecommendedApplications.Count}"
+					 SelectedItem="{Binding SelectedDefaultApplication, Mode=TwoWay}"
+					 GotFocus="DefaultAppsListBoxOnGotFocus" Name="DefaultAppsListBox"
+					 Items="{Binding RecommendedApplications}">
+				<ListBox.ItemTemplate>
+					<DataTemplate>
+						<openWith:ApplicationView />
+					</DataTemplate>
+				</ListBox.ItemTemplate>
+			</ListBox>
+
+			<Expander Grid.Row="3" Grid.ColumnSpan="2" Margin="0,15,0,10">
+				<Expander.Content>
+					<Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*">
+						<ListBox Items="{Binding OtherApplications}"
+						         Height="120" ScrollViewer.VerticalScrollBarVisibility="Visible"
+						         Grid.ColumnSpan="2" GotFocus="OtherAppsListBoxOnGotFocus"
+						         Name="OtherAppsListBox"
+						         SelectedItem="{Binding SelectedOtherApplication, Mode=TwoWay}">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<openWith:ApplicationView />
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+
+						<Image Grid.Row="1" Width="18" Height="18" Margin="10,10,10,0"
+						       ZIndex="100">
+							<Image.Source>
+								<DrawingImage>
+									<DrawingImage.Drawing>
+										<GeometryDrawing Brush="{DynamicResource AlternativeThemeForegroundBrush}"
+										                 Geometry="M505 442.7L405.3 343c-4.5-4.5-10.6-7-17-7H372c27.6-35.3 44-79.7 44-128C416 93.1 322.9 0 208 0S0 93.1 0 208s93.1 208 208 208c48.3 0 92.7-16.4 128-44v16.3c0 6.4 2.5 12.5 7 17l99.7 99.7c9.4 9.4 24.6 9.4 33.9 0l28.3-28.3c9.4-9.4 9.4-24.6.1-34zM208 336c-70.7 0-128-57.2-128-128 0-70.7 57.2-128 128-128 70.7 0 128 57.2 128 128 0 70.7-57.2 128-128 128z" />
+									</DrawingImage.Drawing>
+								</DrawingImage>
+							</Image.Source>
+						</Image>
+
+						<TextBox Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0"
+						         Classes="searchTextBox" Watermark="{x:Static p:Resources.SearchForApplications}"
+						         Text="{Binding ApplicationName}" />
+					</Grid>
+				</Expander.Content>
+
+				<Expander.Header>
+					<TextBlock Classes="openWithDialogTextBlock" Text="{x:Static p:Resources.SelectOtherApplications}" />
+				</Expander.Header>
+			</Expander>
+
+			<CheckBox Grid.Row="4" Grid.ColumnSpan="2" IsChecked="{Binding IsDefaultApplication}">
+				<CheckBox.Content>
+					<TextBlock Classes="openWithDialogTextBlock" Margin="5,0,0,0" Text="{x:Static p:Resources.SetAsDefaultApplication}" />
+				</CheckBox.Content>
+			</CheckBox>
+
+			<Grid Row="5" ColumnSpan="2" HorizontalAlignment="Center" Margin="0,15,0,0">
+				<StackPanel Orientation="Horizontal">
+					<Button Content="{x:Static p:Resources.Cancel}" Classes="dialogButton transparentDialogButton"
+							Command="{Binding CancelCommand}" />
+					<Button Content="{x:Static p:Resources.Select}" Classes="dialogButton"
+							Command="{Binding SelectCommand}" />
+				</StackPanel>
+			</Grid>
+		</Grid>
+	</Border>
+
+</Window>

@@ -363,4 +363,118 @@
   <data name="Terminal" xml:space="preserve">
     <value>Terminal</value>
   </data>
+  <data name="Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="SearchForFilesAndDirectories" xml:space="preserve">
+    <value>Search for files and directories</value>
+  </data>
+  <data name="InvalidRegex" xml:space="preserve">
+    <value>Invalid regular expression</value>
+  </data>
+  <data name="TotalSpaceWithColon" xml:space="preserve">
+    <value>Total space:</value>
+  </data>
+  <data name="AvailableSpaceWithColon" xml:space="preserve">
+    <value>Available space:</value>
+  </data>
+  <data name="File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="CreateFileTitle" xml:space="preserve">
+    <value>Create file</value>
+  </data>
+  <data name="EnterFileNameWithColon" xml:space="preserve">
+    <value>Enter file name:</value>
+  </data>
+  <data name="ClickToMount" xml:space="preserve">
+    <value>Click to mount</value>
+  </data>
+  <data name="Pack" xml:space="preserve">
+    <value>Pack</value>
+  </data>
+  <data name="Extract" xml:space="preserve">
+    <value>Extract</value>
+  </data>
+  <data name="ExtractingArchiveTo" xml:space="preserve">
+    <value>Extracting {0} to {1}</value>
+  </data>
+  <data name="PackingFilesAndDirectoriesTo" xml:space="preserve">
+    <value>Packing {0} files and {1} directories to (2)</value>
+  </data>
+  <data name="PackingFileTo" xml:space="preserve">
+    <value>Packing file {0} to {1}</value>
+  </data>
+  <data name="ExtractedArchiveTo" xml:space="preserve">
+    <value>Extracted archive {0} to {1}</value>
+  </data>
+  <data name="PackedFileTo" xml:space="preserve">
+    <value>Packed file {0} to {1}</value>
+  </data>
+  <data name="PackedFilesAndDirectoriesTo" xml:space="preserve">
+    <value>Packed {0} files and {1} directories to {2}</value>
+  </data>
+  <data name="ExtractArchiveHere" xml:space="preserve">
+    <value>Extract archive here</value>
+  </data>
+  <data name="ExtractArchiveToNewDirectory" xml:space="preserve">
+    <value>Extract archive to new directory</value>
+  </data>
+  <data name="SelectDirectoryForExtraction" xml:space="preserve">
+    <value>Select directory for extraction</value>
+  </data>
+  <data name="PackFilesTitle" xml:space="preserve">
+    <value>Pack files</value>
+  </data>
+  <data name="PackToTheFileWithColon" xml:space="preserve">
+    <value>Pack to the file:</value>
+  </data>
+  <data name="CreateArchive" xml:space="preserve">
+    <value>Create archive</value>
+  </data>
+  <data name="FailedToExtractArchiveTo" xml:space="preserve">
+    <value>Failed to extract archive {0} to {1}</value>
+  </data>
+  <data name="FailedToPackTo" xml:space="preserve">
+    <value>Failed to pack {0} to {1}</value>
+  </data>
+  <data name="FailedToPackFilesAndDirectoriesTo" xml:space="preserve">
+    <value>Failed to pack {0} files and {1} directories to {2}</value>
+  </data>
+  <data name="OpenWith" xml:space="preserve">
+    <value>Open with</value>
+  </data>
+  <data name="OpenWithTitle" xml:space="preserve">
+    <value>Open with</value>
+  </data>
+  <data name="OpeningFiles" xml:space="preserve">
+    <value>Opening "{0}" files</value>
+  </data>
+  <data name="RecommendedApplications" xml:space="preserve">
+    <value>Recommended Applications</value>
+  </data>
+  <data name="SelectOtherApplications" xml:space="preserve">
+    <value>Other Applications</value>
+  </data>
+  <data name="Select" xml:space="preserve">
+    <value>Select</value>
+  </data>
+  <data name="SetAsDefaultApplication" xml:space="preserve">
+    <value>Set as default</value>
+  </data>
+  <data name="SearchForApplications" xml:space="preserve">
+    <value>Search for applications</value>
+  </data>
+  <data name="EnterNewNameWithColon" xml:space="preserve">
+    <value>Enter new name:</value>
+  </data>
+  <data name="ThemeWithColon" xml:space="preserve">
+    <value>Theme:</value>
+  </data>
+  <data name="DarkThemeName" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="LightThemeName" xml:space="preserve">
+    <value>Light</value>
+  </data>
 </root>

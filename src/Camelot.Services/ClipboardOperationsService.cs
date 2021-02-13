@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using ApplicationDispatcher.Interfaces;
+using Camelot.Avalonia.Interfaces;
 using Camelot.Services.Abstractions;
 using Camelot.Services.Abstractions.Operations;
 using Camelot.Services.Environment.Interfaces;
@@ -26,9 +26,9 @@ namespace Camelot.Services
             _environmentService = environmentService;
         }
 
-        public async Task CopyFilesAsync(IReadOnlyCollection<string> files)
+        public async Task CopyFilesAsync(IReadOnlyList<string> files)
         {
-            var selectedFilesString = string.Join(_environmentService.NewLine, 
+            var selectedFilesString = string.Join(_environmentService.NewLine,
                 files.Select(f => UrlPrefix + f));
 
             await _clipboardService.SetTextAsync(selectedFilesString);
@@ -37,14 +37,21 @@ namespace Camelot.Services
         public async Task PasteFilesAsync(string destinationDirectory)
         {
             var selectedFilesString = await _clipboardService.GetTextAsync();
+            if (string.IsNullOrWhiteSpace(selectedFilesString))
+            {
+                return;
+            }
+
             var startIndex = UrlPrefix.Length;
             var files = selectedFilesString
                 .Split()
                 .Where(t => t.StartsWith(UrlPrefix))
                 .Select(f => f.Substring(startIndex))
                 .ToArray();
-
-            await _operationsService.CopyAsync(files, destinationDirectory);
+            if (files.Any())
+            {
+                await _operationsService.CopyAsync(files, destinationDirectory);
+            }
         }
     }
 }

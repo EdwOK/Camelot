@@ -1,88 +1,153 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Camelot.Extensions;
 using Camelot.Services.Abstractions;
 using Camelot.Services.Abstractions.Models;
 using Camelot.Services.Abstractions.Models.Enums;
+using Camelot.Services.Abstractions.Specifications;
+using Camelot.Services.Environment.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace Camelot.Services
 {
     public class FileService : IFileService
     {
         private readonly IPathService _pathService;
+        private readonly IEnvironmentFileService _environmentFileService;
+        private readonly ILogger _logger;
 
-        public FileService(IPathService pathService)
+        public FileService(
+            IPathService pathService,
+            IEnvironmentFileService environmentFileService,
+            ILogger logger)
         {
             _pathService = pathService;
+            _environmentFileService = environmentFileService;
+            _logger = logger;
         }
 
-        public IReadOnlyCollection<FileModel> GetFiles(string directory)
-        {
-            var files = Directory
+        public IReadOnlyList<FileModel> GetFiles(string directory, ISpecification<FileModel> specification = null) =>
+            _environmentFileService
                 .GetFiles(directory)
-                .Select(CreateFrom);
+                .Select(CreateFrom)
+                .WhereNotNull()
+                .Where(f => specification?.IsSatisfiedBy(f) ?? true)
+                .ToArray();
 
-            return files.ToArray();
-        }
-
-        public IReadOnlyCollection<FileModel> GetFiles(IReadOnlyCollection<string> files) =>
-            files.Select(CreateFrom).ToArray();
+        public IReadOnlyList<FileModel> GetFiles(IReadOnlyList<string> files) =>
+            files.Select(CreateFrom).WhereNotNull().ToArray();
 
         public FileModel GetFile(string file) => CreateFrom(file);
 
-        public bool CheckIfExists(string file) => File.Exists(file);
+        public bool CheckIfExists(string file) => _environmentFileService.CheckIfExists(file);
 
-        public Task CopyAsync(string source, string destination, bool overwrite)
+        public async Task<bool> CopyAsync(string source, string destination, bool overwrite)
         {
-            File.Copy(source, destination, overwrite);
+            if (CheckIfExists(destination) && !overwrite)
+            {
+                return false;
+            }
 
-            return Task.CompletedTask;
+            try
+            {
+                await using var readStream = _environmentFileService.OpenRead(source);
+                await using var writeStream = _environmentFileService.OpenWrite(destination);
+                await readStream.CopyToAsync(writeStream);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    $"Failed to copy file {source} to {destination} (overwrite: {overwrite}) with error {ex}");
+
+                return false;
+            }
+
+            return true;
         }
 
-        public void Remove(string file) => File.Delete(file);
+        public bool Remove(string file)
+        {
+            try
+            {
+                _environmentFileService.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to remove file {file} with error {ex}");
+
+                return false;
+            }
+
+            return true;
+        }
 
         public bool Rename(string filePath, string newName)
         {
             var parentDirectory = _pathService.GetParentDirectory(filePath);
             var newFilePath = _pathService.Combine(parentDirectory, newName);
-            if (filePath == newFilePath)
+
+            try
             {
+                _environmentFileService.Move(filePath, newFilePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to rename file {filePath} to {newName} with error {ex}");
+
                 return false;
             }
-
-            if (CheckIfExists(newFilePath))
-            {
-                return false;
-            }
-
-            File.Move(filePath, newFilePath);
 
             return true;
         }
 
         public Task WriteTextAsync(string filePath, string text) =>
-            File.WriteAllTextAsync(filePath, text);
+            _environmentFileService.WriteTextAsync(filePath, text);
 
         public Task WriteBytesAsync(string filePath, byte[] bytes) =>
-            File.WriteAllBytesAsync(filePath, bytes);
+            _environmentFileService.WriteBytesAsync(filePath, bytes);
+
+        public void CreateFile(string filePath)
+        {
+            try
+            {
+                _environmentFileService.Create(filePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to create file {filePath} with error {ex}");
+            }
+        }
+
+        public Stream OpenRead(string filePath) => _environmentFileService.OpenRead(filePath);
+
+        public Stream OpenWrite(string filePath) => _environmentFileService.OpenWrite(filePath);
 
         private FileModel CreateFrom(string file)
         {
-            var fileInfo = new FileInfo(file);
-            var fileModel = new FileModel
+            try
             {
-                Name = fileInfo.Name,
-                FullPath = fileInfo.FullName,
-                LastModifiedDateTime = fileInfo.LastWriteTime,
-                Type = GetFileType(fileInfo),
-                SizeBytes = fileInfo.Length,
-                Extension = _pathService.GetExtension(fileInfo.Name),
-                LastAccessDateTime = fileInfo.LastAccessTime,
-                CreatedDateTime = fileInfo.CreationTime
-            };
+                var fileInfo = _environmentFileService.GetFile(file);
+                var fileModel = new FileModel
+                {
+                    Name = fileInfo.Name,
+                    FullPath = fileInfo.FullName,
+                    LastModifiedDateTime = fileInfo.LastWriteTime,
+                    Type = GetFileType(fileInfo),
+                    SizeBytes = fileInfo.Length,
+                    Extension = _pathService.GetExtension(fileInfo.Name),
+                    LastAccessDateTime = fileInfo.LastAccessTime,
+                    CreatedDateTime = fileInfo.CreationTime
+                };
 
-            return fileModel;
+                return fileModel;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static FileType GetFileType(FileSystemInfo fileInfo) =>

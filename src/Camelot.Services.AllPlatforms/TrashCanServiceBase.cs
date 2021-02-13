@@ -3,82 +3,70 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Drives;
 using Camelot.Services.Abstractions.Operations;
 
 namespace Camelot.Services.AllPlatforms
 {
     public abstract class TrashCanServiceBase : ITrashCanService
     {
-        private readonly IDriveService _driveService;
+        private readonly IMountedDriveService _mountedDriveService;
         private readonly IOperationsService _operationsService;
         private readonly IPathService _pathService;
-        private readonly IFileService _fileService;
 
         protected TrashCanServiceBase(
-            IDriveService driveService,
+            IMountedDriveService mountedDriveService,
             IOperationsService operationsService,
-            IPathService pathService,
-            IFileService fileService)
+            IPathService pathService)
         {
-            _driveService = driveService;
+            _mountedDriveService = mountedDriveService;
             _operationsService = operationsService;
             _pathService = pathService;
-            _fileService = fileService;
         }
 
-        public async Task<bool> MoveToTrashAsync(IReadOnlyCollection<string> nodes, CancellationToken cancellationToken)
+        public async Task<bool> MoveToTrashAsync(IReadOnlyList<string> nodes, CancellationToken cancellationToken)
         {
-            var volume = GetVolume(nodes);
-            var files = nodes.Where(_fileService.CheckIfExists).ToArray();
+            cancellationToken.ThrowIfCancellationRequested();
 
-            await PrepareAsync(files);
+            var volume = GetVolume(nodes);
+
+            await PrepareAsync(nodes);
 
             var trashCanLocations = GetTrashCanLocations(volume);
+            var result = false;
             foreach (var trashCanLocation in trashCanLocations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var filesTrashCanLocation = GetFilesTrashCanLocation(trashCanLocation);
+                var filesTrashCanLocation = GetFilesTrashCanLocation(trashCanLocation); // TODO: create if not exists?
                 var destinationPathsDictionary = GetFilesTrashCanPathsMapping(nodes, filesTrashCanLocation);
-                var isRemoved = await TryMoveToTrashAsync(destinationPathsDictionary);
-                if (isRemoved)
-                {
-                    await WriteMetaDataAsync(destinationPathsDictionary, trashCanLocation);
+                await _operationsService.MoveAsync(destinationPathsDictionary);
 
-                    return true;
-                }
+                await WriteMetaDataAsync(destinationPathsDictionary, trashCanLocation);
+                result = true;
+
+                break;
             }
 
-            return false;
+            await CleanupAsync();
+
+            return result;
         }
 
-        protected virtual Task PrepareAsync(string[] files) => Task.CompletedTask;
+        protected virtual Task PrepareAsync(IReadOnlyList<string> nodes) => Task.CompletedTask;
 
-        protected abstract IReadOnlyCollection<string> GetTrashCanLocations(string volume);
+        protected abstract IReadOnlyList<string> GetTrashCanLocations(string volume);
 
         protected abstract string GetFilesTrashCanLocation(string trashCanLocation);
 
         protected abstract Task WriteMetaDataAsync(IReadOnlyDictionary<string, string> filePathsDictionary,
             string trashCanLocation);
 
-        protected abstract string GetUniqueFilePath(string file, HashSet<string> filesSet, string directory);
+        protected abstract string GetUniqueFilePath(string fileName, HashSet<string> filesNamesSet, string directory);
 
-        private async Task<bool> TryMoveToTrashAsync(IReadOnlyDictionary<string, string> files)
-        {
-            try
-            {
-                await _operationsService.MoveAsync(files);
-            }
-            catch
-            {
-                return false;
-            }
+        protected virtual Task CleanupAsync() => Task.CompletedTask;
 
-            // TODO: check results in future
-            return true;
-        }
-
-        private IReadOnlyDictionary<string, string> GetFilesTrashCanPathsMapping(IReadOnlyCollection<string> files,
+        private IReadOnlyDictionary<string, string> GetFilesTrashCanPathsMapping(IReadOnlyList<string> files,
             string filesTrashCanLocation)
         {
             var fileNames = new HashSet<string>();
@@ -96,6 +84,6 @@ namespace Camelot.Services.AllPlatforms
         }
 
         private string GetVolume(IEnumerable<string> files) =>
-            _driveService.GetFileDrive(files.First()).RootDirectory;
+            _mountedDriveService.GetFileDrive(files.First()).RootDirectory;
     }
 }

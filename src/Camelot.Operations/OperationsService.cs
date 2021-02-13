@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Camelot.Extensions;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.Services.Abstractions.Models.Operations;
 using Camelot.Services.Abstractions.Operations;
 
@@ -62,11 +63,27 @@ namespace Camelot.Operations
             await moveOperation.RunAsync();
         }
 
+        public async Task PackAsync(IReadOnlyList<string> nodes, string outputFilePath, ArchiveType archiveType)
+        {
+            var settings = GetPackOperationSettings(nodes, outputFilePath, archiveType);
+            var packOperation = _operationsFactory.CreatePackOperation(settings);
+            _operationsStateService.AddOperation(packOperation);
+
+            await packOperation.RunAsync();
+        }
+
+        public async Task ExtractAsync(string archivePath, string outputDirectory, ArchiveType archiveType)
+        {
+            var settings = GetExtractOperationSettings(archivePath, outputDirectory, archiveType);
+            var extractOperation = _operationsFactory.CreateExtractOperation(settings);
+            _operationsStateService.AddOperation(extractOperation);
+
+            await extractOperation.RunAsync();
+        }
+
         public async Task RemoveAsync(IReadOnlyList<string> nodes)
         {
-            var (files, directories) = Split(nodes);
-            var sourceDirectory = GetCommonRootDirectory(nodes);
-            var settings = Create(files, directories, sourceDirectory);
+            var settings = GetUnaryFileSystemOperationSettings(nodes);
             var deleteOperation = _operationsFactory.CreateDeleteOperation(settings);
             _operationsStateService.AddOperation(deleteOperation);
 
@@ -90,25 +107,23 @@ namespace Camelot.Operations
             _directoryService.Create(fullPath);
         }
 
-        private (string[] Files, string[] Directories) Split(IReadOnlyList<string> nodes)
+        public void CreateFile(string sourceDirectory, string fileName)
         {
-            var files = nodes
-                .Where(_fileService.CheckIfExists)
-                .ToArray();
-            var directories = nodes
-                .Where(_directoryService.CheckIfExists)
-                .ToArray();
+            var fullPath = _pathService.Combine(sourceDirectory, fileName);
 
-            return (files, directories);
+            _fileService.CreateFile(fullPath);
         }
 
         private BinaryFileSystemOperationSettings GetBinaryFileSystemOperationSettings(
-            IReadOnlyList<string> nodes,
-            string outputDirectory)
+            IReadOnlyList<string> nodes, string outputDirectory)
         {
             var (files, directories) = Split(nodes);
             var sourceDirectory = GetCommonRootDirectory(nodes);
             var filesInDirectories = directories.SelectMany(_directoryService.GetFilesRecursively);
+            var emptyDirectories = directories
+                .SelectMany(_directoryService.GetEmptyDirectoriesRecursively)
+                .Select(d => GetDestinationPath(sourceDirectory, d, outputDirectory))
+                .ToArray();
             var filePathsDictionary = filesInDirectories
                 .Concat(files)
                 .ToDictionary(
@@ -122,13 +137,30 @@ namespace Camelot.Operations
                 .ToArray();
 
             return new BinaryFileSystemOperationSettings(directories, files, outputTopLevelDirectories,
-                outputTopLevelFiles, filePathsDictionary, sourceDirectory, outputDirectory);
+                outputTopLevelFiles, filePathsDictionary, emptyDirectories, sourceDirectory, outputDirectory);
         }
 
         private BinaryFileSystemOperationSettings GetBinaryFileSystemOperationSettings(
             IReadOnlyDictionary<string, string> nodes)
         {
             var (files, directories) = Split(nodes.Keys.ToArray());
+            var sourceDirectory = GetCommonRootDirectory(nodes.Keys.ToArray());
+
+            var emptyDirectories = new List<string>();
+            var filePathsDictionary = files.ToDictionary(f => f, f => nodes[f]);
+            foreach (var directory in directories)
+            {
+                var filesInDirectory = _directoryService.GetFilesRecursively(directory);
+                var outputDirectory = nodes[directory];
+
+                filesInDirectory.ForEach(f =>
+                    filePathsDictionary[f] = GetDestinationPath(directory, f, outputDirectory));
+                var innerEmptyDirectories = _directoryService
+                    .GetEmptyDirectoriesRecursively(directory)
+                    .Select(d => GetDestinationPath(directory, d, outputDirectory));
+                emptyDirectories.AddRange(innerEmptyDirectories);
+            }
+
             var outputTopLevelFiles = files
                 .Select(f => nodes[f])
                 .ToArray();
@@ -137,11 +169,30 @@ namespace Camelot.Operations
                 .ToArray();
 
             return new BinaryFileSystemOperationSettings(directories, files, outputTopLevelDirectories,
-                outputTopLevelFiles, nodes);
+                outputTopLevelFiles, filePathsDictionary, emptyDirectories, sourceDirectory);
         }
 
-        private string GetCommonRootDirectory(IEnumerable<string> nodes) =>
-            _pathService.GetCommonRootDirectory(nodes.ToArray());
+        private UnaryFileSystemOperationSettings GetUnaryFileSystemOperationSettings(IReadOnlyList<string> nodes)
+        {
+            var (files, directories) = Split(nodes);
+            var sourceDirectory = GetCommonRootDirectory(nodes);
+
+            return new UnaryFileSystemOperationSettings(directories, files, sourceDirectory);
+        }
+
+        private PackOperationSettings GetPackOperationSettings(IReadOnlyList<string> nodes, string outputFilePath, ArchiveType archiveType)
+        {
+            var (files, directories) = Split(nodes);
+            var sourceDirectory = _pathService.GetCommonRootDirectory(nodes);
+            var targetDirectory = _pathService.GetParentDirectory(outputFilePath);
+
+            return new PackOperationSettings(directories, files, outputFilePath, sourceDirectory,
+                targetDirectory, archiveType);
+        }
+
+        private static ExtractArchiveOperationSettings GetExtractOperationSettings(
+            string archivePath, string outputDirectory, ArchiveType archiveType) =>
+            new ExtractArchiveOperationSettings(archivePath, outputDirectory, archiveType);
 
         private string GetDestinationPath(string sourceDirectory,
             string sourcePath, string destinationDirectory)
@@ -151,8 +202,19 @@ namespace Camelot.Operations
             return _pathService.Combine(destinationDirectory, relativeSourcePath);
         }
 
-        private static UnaryFileSystemOperationSettings Create(
-            IReadOnlyList<string> files, IReadOnlyList<string> directories, string sourceDirectory) =>
-            new UnaryFileSystemOperationSettings(directories, files, sourceDirectory);
+        private (string[] Files, string[] Directories) Split(IReadOnlyList<string> nodes)
+        {
+            var files = nodes
+                .Where(_fileService.CheckIfExists)
+                .ToArray();
+            var directories = nodes
+                .Where(_directoryService.CheckIfExists)
+                .ToArray();
+
+            return (files, directories);
+        }
+
+        private string GetCommonRootDirectory(IReadOnlyList<string> nodes) =>
+            _pathService.GetCommonRootDirectory(nodes);
     }
 }

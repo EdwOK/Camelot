@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Camelot.Extensions;
@@ -13,6 +14,10 @@ namespace Camelot.Views.Main
 {
     public class FilesPanelView : UserControl
     {
+        private DataGrid FilesDataGrid => this.FindControl<DataGrid>("FilesDataGrid");
+
+        private TextBox DirectoryTextBox => this.FindControl<TextBox>("DirectoryTextBox");
+
         private FilesPanelViewModel ViewModel => (FilesPanelViewModel) DataContext;
 
         public FilesPanelView()
@@ -21,33 +26,50 @@ namespace Camelot.Views.Main
             SubscribeToEvents();
         }
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load(this);
-        }
+        private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
         private void SubscribeToEvents() => DataContextChanged += OnDataContextChanged;
 
-        private void OnDataContextChanged(object sender, EventArgs e) =>
-            ViewModel.DeactivatedEvent += ViewModelOnDeactivatedEvent;
-
-        private void ViewModelOnDeactivatedEvent(object sender, EventArgs e)
+        private void OnDataContextChanged(object sender, EventArgs e)
         {
-            var dataGrid = this.FindControl<DataGrid>("FilesDataGrid");
+            ViewModel.Deactivated += ViewModelOnDeactivated;
+            ViewModel.Activated += ViewModelOnActivated;
+        }
 
-            dataGrid.SelectedItems.Clear();
+        private void ViewModelOnDeactivated(object sender, EventArgs e) => ClearSelection();
+
+        private void ViewModelOnActivated(object sender, EventArgs e)
+        {
+            if (!DirectoryTextBox.IsFocused)
+            {
+                FilesDataGrid.Focus();
+            }
         }
 
         private void OnDataGridSelectionChanged(object sender, SelectionChangedEventArgs args)
         {
             var addedItems = args
-                .RemovedItems
+                .AddedItems
                 .Cast<IFileSystemNodeViewModel>()
+                .Where(i => !(i is IDirectoryViewModel directoryViewModel && directoryViewModel.IsParentDirectory))
                 .ToArray();
+
+            if (!ViewModel.IsActive)
+            {
+                // data grid inserted items in inactive file panel
+                // remove them if any
+                if (addedItems.Any())
+                {
+                   ClearSelection();
+                }
+
+                return;
+            }
+
             ViewModel.SelectedFileSystemNodes.AddRange(addedItems);
 
             var removedItems = args
-                .AddedItems
+                .RemovedItems
                 .Cast<IFileSystemNodeViewModel>()
                 .ToArray();
             ViewModel.SelectedFileSystemNodes.RemoveMany(removedItems);
@@ -75,8 +97,22 @@ namespace Camelot.Views.Main
             nodeViewModel.OpenCommand.Execute(null);
         }
 
+        private void OnDataGridKeyDown(object sender, KeyEventArgs args)
+        {
+            if (args.Key != Key.Delete && args.Key != Key.Back)
+            {
+                return;
+            }
+
+            args.Handled = true;
+
+            ViewModel.OperationsViewModel.MoveToTrashCommand.Execute(null);
+        }
+
         private void OnDataGridCellPointerPressed(object sender, DataGridCellPointerPressedEventArgs args) =>
             ActivateViewModel();
+
+        private void OnDirectoryTextBoxGotFocus(object sender, GotFocusEventArgs args) => ActivateViewModel();
 
         private void ActivateViewModel() => ViewModel.ActivateCommand.Execute(null);
 
@@ -109,5 +145,7 @@ namespace Camelot.Views.Main
 
         private static void StopEditing(IFileSystemNodeViewModel viewModel) =>
             viewModel.IsWaitingForEdit = viewModel.IsEditing = false;
+
+        private void ClearSelection() => FilesDataGrid.SelectedItems.Clear();
     }
 }

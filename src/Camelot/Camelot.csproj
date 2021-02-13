@@ -3,7 +3,25 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <IsPackable>false</IsPackable>
-    <Version>0.1.2</Version>
+    <Version>0.2.1</Version>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyName>camelot</AssemblyName>
+    <PackagePrefix>$([System.Text.RegularExpressions.Regex]::Replace($(AssemblyName), "\B[A-Z]", "-$0").ToLower())</PackagePrefix>
+    <PackageName>$(PackagePrefix)_$(Version)</PackageName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CFBundleName>Camelot</CFBundleName>
+    <CFBundleDisplayName>Camelot</CFBundleDisplayName>
+    <CFBundleIdentifier>com.camelot</CFBundleIdentifier>
+    <CFBundleVersion>0.2.1</CFBundleVersion>
+    <CFBundleShortVersionString>0.2.1</CFBundleShortVersionString>
+    <CFBundlePackageType>AAPL</CFBundlePackageType>
+    <CFBundleSignature>????</CFBundleSignature>
+    <CFBundleExecutable>Camelot</CFBundleExecutable>
+    <CFBundleIconFile>/Assets/logo.icns</CFBundleIconFile>
+    <NSPrincipalClass>NSApplication</NSPrincipalClass>
+    <NSHighResolutionCapable>true</NSHighResolutionCapable>
   </PropertyGroup>
   <ItemGroup>
     <Compile Update="**\*.xaml.cs">
@@ -31,9 +49,6 @@
       <SubType>Designer</SubType>
     </AvaloniaResource>
     <AvaloniaResource Update="Controls\MenuView.xaml">
-      <SubType>Designer</SubType>
-    </AvaloniaResource>
-    <AvaloniaResource Update="Controls\CircularProgressBar.xaml">
       <SubType>Designer</SubType>
     </AvaloniaResource>
     <Compile Remove="Controls\CircularProgressBar.cs" />
@@ -91,8 +106,8 @@
     <Compile Update="Views\Dialogs\AboutDialog.xaml.cs">
       <DependentUpon>AboutDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Update="Views\Dialogs\CreateDirectoryDialog.xaml.cs">
-      <DependentUpon>CreateDirectoryDialog.xaml</DependentUpon>
+    <Compile Update="Views\Dialogs\CreateNodeDialog.xaml.cs">
+      <DependentUpon>CreateNodeDialog.xaml</DependentUpon>
     </Compile>
     <Compile Update="Views\Dialogs\OverwriteOptionsDialog.xaml.cs">
       <DependentUpon>OverwriteOptionsDialog.xaml</DependentUpon>
@@ -118,21 +133,39 @@
     <Compile Update="Views\Dialogs\Settings\GeneralSettingsView.xaml.cs">
       <DependentUpon>GeneralSettingsView.xaml</DependentUpon>
     </Compile>
+    <Compile Update="Views\Dialogs\OpenWithDialog.xaml.cs">
+	  <DependentUpon>OpenWithDialog.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Main\Drives\DriveView.xaml.cs">
+      <DependentUpon>DriveView.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Main\Directories\FavouriteDirectoriesListView.xaml.cs">
+      <DependentUpon>FavouriteDirectoriesListView.xaml.xaml</DependentUpon>
+    </Compile>
+    <Compile Update="Views\Dialogs\OpenWith\ApplicationView.xaml.cs">
+      <DependentUpon>ApplicationView.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.9.11" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.9.11" />
-    <PackageReference Include="Avalonia.Desktop" Version="0.9.11" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.5" />
+    <PackageReference Include="Avalonia" Version="0.10.0" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="0.10.0" />
+    <PackageReference Include="Avalonia.Diagnostics" Version="0.10.0" />
+    <PackageReference Include="Dotnet.Bundle" Version="0.9.13" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.11" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.11" />
+    <PackageReference Include="Serilog" Version="2.10.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.RollingFile" Version="3.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Camelot.Avalonia\Camelot.Avalonia.csproj" />
     <ProjectReference Include="..\Camelot.DataAccess.LiteDb\Camelot.DataAccess.LiteDb.csproj" />
     <ProjectReference Include="..\Camelot.Operations\Camelot.Operations.csproj" />
+    <ProjectReference Include="..\Camelot.Services.Archives\Camelot.Services.Archives.csproj" />
     <ProjectReference Include="..\Camelot.Services\Camelot.Services.csproj" />
-    <ProjectReference Include="..\Camelot.TaskPool\Camelot.TaskPool.csproj" />
     <ProjectReference Include="..\Camelot.ViewModels\Camelot.ViewModels.csproj" />
   </ItemGroup>
   <ItemGroup>

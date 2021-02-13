@@ -10,14 +10,27 @@
         <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}" />
     </Style>
 
+    <Style Selector="Button.columnHeaderButton">
+        <Setter Property="Margin" Value="5,0" />
+    </Style>
+
     <Style Selector="TextBlock.operationTextBlock">
         <Setter Property="FontFamily" Value="SansSerif" />
         <Setter Property="FontSize" Value="16" />
         <Setter Property="Margin" Value="10,4,0,0" />
+        <Setter Property="Foreground" Value="{DynamicResource OperationButtonForegroundBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.driveNameTextBlock">
+        <Setter Property="FontFamily" Value="SansSerif" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Margin" Value="10,0,0,5" />
+        <Setter Property="Foreground" Value="{DynamicResource MainWindowForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBlock.operationHotkeyTextBlock">
         <Setter Property="FontFamily" Value="SansSerif" />
+        <Setter Property="Foreground" Value="{DynamicResource OperationButtonHotkeyBrush}" />
         <Setter Property="FontSize" Value="16" />
         <Setter Property="Opacity" Value="0.5" />
         <Setter Property="Margin" Value="5,5,0,0" />
@@ -25,7 +38,8 @@
 
     <Style Selector="Border.tabBorder">
         <Setter Property="CornerRadius" Value="4,4,0,0" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderThickness" Value="1,1,1,0" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
     </Style>
 
     <Style Selector="Button.tabButton">
@@ -37,6 +51,13 @@
     <Style Selector="TextBox.directoryTextBox">
         <Setter Property="FontSize" Value="16" />
         <Setter Property="Margin" Value="10,0,15,0" />
+        <Setter Property="Height" Value="30" />
+    </Style>
+
+    <Style Selector="TextBox.searchTextBox">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Padding" Value="35,2,75,0" />
+        <Setter Property="Margin" Value="27,10,5,0" />
         <Setter Property="Height" Value="30" />
     </Style>
 
@@ -60,13 +81,13 @@
     <Style Selector="TextBlock.selectionInfoTextBlock">
         <Setter Property="FontFamily" Value="SansSerif" />
         <Setter Property="FontSize" Value="16" />
-        <Setter Property="Foreground" Value="{DynamicResource HighlightForegroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource SearchPanelForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBlock.tabNameTextBlock">
-        <Setter Property="Margin" Value="4,0" />
         <Setter Property="FontSize" Value="16" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Margin" Value="5,0" />
     </Style>
 
     <Style Selector="Border#OperationsBorder">
@@ -85,7 +106,7 @@
     </Style>
 
     <Style Selector="TextBlock.errorTextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource OperationErrorBrush}" />
     </Style>
 
     <Style Selector="ProgressBar.operationProgressBar">
@@ -97,7 +118,7 @@
         <Setter Property="Foreground" Value="{DynamicResource InactiveTabForegroundBrush}" />
     </Style>
 
-    <Style Selector="TextBlock#ReplaceTextBlock">
+    <Style Selector="TextBlock.dialogTitleTextBlock">
         <Setter Property="FontSize" Value="22" />
         <Setter Property="Margin" Value="10,0,0,0" />
         <Setter Property="TextWrapping" Value="Wrap" />
@@ -106,12 +127,29 @@
 
     <Style Selector="Button.topOperationButton">
         <Setter Property="Foreground" Value="{DynamicResource MainWindowForegroundBrush}" />
-        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontSize" Value="16" />
         <Setter Property="Opacity" Value="0.8" />
+        <Setter Property="Height" Value="30" />
+        <Setter Property="Margin" Value="15,0,0,0" />
     </Style>
 
     <Style Selector="Button.topOperationButton:pointerover">
         <Setter Property="Opacity" Value="0.9" />
+    </Style>
+
+    <Style Selector="Image.iconImage">
+        <Setter Property="Width" Value="20" />
+        <Setter Property="Height" Value="20" />
+    </Style>
+
+    <Style Selector="Image.searchImage">
+        <Setter Property="Width" Value="18" />
+        <Setter Property="Height" Value="18" />
+    </Style>
+
+    <Style Selector="Image.largeSearchImage">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
     </Style>
 
     <Style Selector="TextBlock.filePanelTextBlock">
@@ -139,10 +177,6 @@
         <Setter Property="Opacity" Value="0.9" />
     </Style>
 
-    <Style Selector="Border.tabBorder">
-        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderLowBrush}" />
-    </Style>
-
     <Style Selector="Rectangle.tabRectangleGloballyActive">
         <Setter Property="Fill" Value="{DynamicResource ThemeAccentBrush3}" />
     </Style>
@@ -151,23 +185,23 @@
         <Setter Property="Fill" Value="{DynamicResource ThemeAccentBrush}" />
     </Style>
 
+    <Style Selector="Rectangle.tabRectangleInactive">
+        <Setter Property="Fill" Value="{DynamicResource ThemeBorderLowBrush}" />
+    </Style>
+
     <Style Selector="Border.selectionBorder">
         <Setter Property="Background" Value="{DynamicResource HighlightBrush}" />
-        <Setter Property="Margin" Value="27,2,5,0" />
+        <Setter Property="Margin" Value="27,5,5,0" />
         <Setter Property="Padding" Value="7,2" />
         <Setter Property="CornerRadius" Value="5" />
     </Style>
 
     <Style Selector="Grid.inactiveTabGrid">
-        <Setter Property="Background" Value="{DynamicResource ThemeControlLowBrush}" />
+        <Setter Property="Background" Value="{DynamicResource InactiveTabBackgroundBrush}" />
     </Style>
 
     <Style Selector="TextBlock.inactiveTabNameTextBlock">
         <Setter Property="Foreground" Value="{DynamicResource InactiveTabForegroundBrush}" />
-    </Style>
-
-    <Style Selector="DockPanel#MenuDockPanel">
-        <Setter Property="Background" Value="{DynamicResource MenuBackgroundColorBrush}" />
     </Style>
 
     <Style Selector="Menu.smallContextMenu TextBlock">
@@ -200,6 +234,23 @@
 
     <Style Selector="Button.tabButton:pressed /template/ ContentPresenter">
         <Setter Property="Background" Value="{DynamicResource TabButtonHoverBrush}" />
+    </Style>
+
+    <Style Selector="TextBox.fileNameTextBox">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="Padding" Value="2" />
+    </Style>
+
+    <Style Selector="ToggleButton#OperationsToggleButton">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="ToggleButton.searchOptionToggleButton /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="ToggleButton.searchOptionToggleButton:checked /template/ ContentControl">
+        <Setter Property="Foreground" Value="{DynamicResource HighlightBrush}" />
     </Style>
 
 </Styles>

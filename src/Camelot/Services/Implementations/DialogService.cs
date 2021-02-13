@@ -2,8 +2,9 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using ApplicationDispatcher.Interfaces;
 using Avalonia;
+using Camelot.Avalonia.Interfaces;
+using Camelot.DependencyInjection;
 using Camelot.ViewModels.Implementations;
 using Camelot.ViewModels.Implementations.Dialogs;
 using Camelot.ViewModels.Services;
@@ -40,14 +41,18 @@ namespace Camelot.Services.Implementations
             var window = CreateView<TResult>(viewModelName);
             var viewModel = CreateViewModel<TResult>(viewModelName);
             Bind(window, viewModel);
-            if (viewModel is ParameterizedDialogViewModelBase<TResult, TParameter> parameterizedDialogViewModelBase)
+
+            switch (viewModel)
             {
-                parameterizedDialogViewModelBase.Activate(parameter);
-            }
-            else
-            {
-                throw new InvalidOperationException(
-                    $"{viewModel.GetType().FullName} doesn't support passing parameters!");
+                case ParameterizedDialogViewModelBase<TResult, TParameter> parameterizedDialogViewModelBase:
+                    parameterizedDialogViewModelBase.Activate(parameter);
+                    break;
+                case ParameterizedDialogViewModelBaseAsync<TResult, TParameter> parameterizedDialogViewModelBaseAsync:
+                    await parameterizedDialogViewModelBaseAsync.ActivateAsync(parameter);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"{viewModel.GetType().FullName} doesn't support passing parameters!");
             }
 
             return await ShowDialogAsync(window);
@@ -100,7 +105,7 @@ namespace Camelot.Services.Implementations
 
         private static object GetView(Type type) => Activator.CreateInstance(type);
 
-        private static object GetViewModel(Type type) => Locator.Current.GetService(type);
+        private static object GetViewModel(Type type) => Locator.Current.GetRequiredService(type);
 
         private static Type GetViewType(string viewModelName)
         {
@@ -115,11 +120,14 @@ namespace Camelot.Services.Implementations
             where TResult : DialogResultBase
         {
             var mainWindow = (MainWindow) _mainWindowProvider.GetMainWindow();
-            window.Owner = mainWindow;
 
             mainWindow.ShowOverlay();
             var result = await window.ShowDialog<TResult>(mainWindow);
             mainWindow.HideOverlay();
+            if (window is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
 
             return result;
         }

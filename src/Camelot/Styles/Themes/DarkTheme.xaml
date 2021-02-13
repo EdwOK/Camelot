@@ -19,20 +19,20 @@
         <Color x:Key="OperationButtonHoverBackgroundColor">#45325a</Color>
         <Color x:Key="OperationButtonPressedBackgroundColor">#342544</Color>
         <Color x:Key="SuccessColor">#bcffbc</Color>
-        <Color x:Key="ErrorColor">#ffbcbc</Color>
+        <Color x:Key="OperationErrorColor">#ffbcbc</Color>
         <Color x:Key="SuccessBackgroundColor">#35a335</Color>
         <Color x:Key="SuccessHoverBackgroundColor">#3aad3a</Color>
         <Color x:Key="SuccessPressedBackgroundColor">#2f972f</Color>
         <Color x:Key="SettingsTabBorderColor">#181614</Color>
+        <Color x:Key="ErrorColor">#a34235</Color>
 
         <!-- Avalonia brushes -->
         <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="{DynamicResource MainBackgroundColor}" />
         <SolidColorBrush x:Key="ThemeForegroundBrush" Color="{DynamicResource WhiteColor}"
                          Opacity="0.8" />
-        <Color x:Key="ThemeForegroundColor">#FFDEDEDE</Color>
-        <SolidColorBrush x:Key="BlackBrush" Color="{DynamicResource BlackColor}" />
         <SolidColorBrush x:Key="HighlightBrush" Color="{DynamicResource OrangeColor}" />
-        <SolidColorBrush x:Key="HighlightForegroundBrush" Color="{DynamicResource WhiteColor}" Opacity="0.9" />
+        <SolidColorBrush x:Key="HighlightForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.9" />
         <SolidColorBrush x:Key="ThemeAccentBrush4" Color="{DynamicResource OrangeColor}" />
         <SolidColorBrush x:Key="ThemeAccentBrush3" Color="{DynamicResource BrightOrangeColor}" />
         <SolidColorBrush x:Key="ThemeControlLowBrush" Color="{DynamicResource BlackColor}"
@@ -52,27 +52,43 @@
                          Opacity="0.3" />
         <SolidColorBrush x:Key="ThemeForegroundLowBrush" Color="{DynamicResource WhiteColor}"
                          Opacity="0.3" />
+        <SolidColorBrush x:Key="ErrorBrush" Color="{DynamicResource ErrorColor}" />
 
         <!-- Custom brushes -->
         <SolidColorBrush x:Key="AlternativeThemeBackgroundBrush" Color="{DynamicResource AlternativeMainBackgroundColor}" />
         <SolidColorBrush x:Key="AlternativeThemeForegroundBrush" Color="{DynamicResource WhiteColor}"
                          Opacity="0.7" />
+        <SolidColorBrush x:Key="OperationButtonHotkeyBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.8" />
+        <SolidColorBrush x:Key="SearchPanelForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.9" />
         <SolidColorBrush x:Key="OperationButtonBackgroundColorBrush" Color="{DynamicResource OperationButtonBackgroundColor}" />
         <SolidColorBrush x:Key="OperationButtonHoverBackgroundColorBrush" Color="{DynamicResource OperationButtonHoverBackgroundColor}" />
         <SolidColorBrush x:Key="OperationButtonPressedBackgroundColorBrush" Color="{DynamicResource OperationButtonPressedBackgroundColor}" />
         <SolidColorBrush x:Key="MainWindowForegroundBrush" Color="{DynamicResource WhiteColor}" />
+        <SolidColorBrush x:Key="DialogButtonForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.8" />
+        <SolidColorBrush x:Key="InactiveTabBackgroundBrush" Color="{DynamicResource BlackColor}"
+                         Opacity="0.2" />
         <SolidColorBrush x:Key="InactiveTabForegroundBrush" Color="{DynamicResource WhiteColor}"
                          Opacity="0.65" />
         <SolidColorBrush x:Key="TopPanelGridBackgroundBrush" Color="{DynamicResource MenuBackgroundColor}"
                          Opacity="0.2" />
         <SolidColorBrush x:Key="SuccessBrush" Color="{DynamicResource SuccessColor}" />
+        <SolidColorBrush x:Key="SearchIconForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.7" />
         <SolidColorBrush x:Key="SuccessBackgroundBrush" Color="{DynamicResource SuccessBackgroundColor}" />
         <SolidColorBrush x:Key="SuccessHoverBackgroundBrush" Color="{DynamicResource SuccessHoverBackgroundColor}" />
         <SolidColorBrush x:Key="SuccessPressedBackgroundBrush" Color="{DynamicResource SuccessPressedBackgroundColor}" />
         <SolidColorBrush x:Key="SettingsTabBorderBrush" Color="{DynamicResource SettingsTabBorderColor}" />
-        <SolidColorBrush x:Key="ErrorBrush" Color="{DynamicResource ErrorColor}" />
+        <SolidColorBrush x:Key="OperationErrorBrush" Color="{DynamicResource OperationErrorColor}" />
         <SolidColorBrush x:Key="DialogOverlayBrush" Color="{DynamicResource BlackColor}" />
         <SolidColorBrush x:Key="ProgressBarForegroundBrush" Color="{DynamicResource SuccessBackgroundColor}" />
+        <SolidColorBrush x:Key="OperationButtonForegroundBrush" Color="{DynamicResource WhiteColor}" />
+        <SolidColorBrush x:Key="SettingsDialogForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.8" />
+        <SolidColorBrush x:Key="IconDialogButtonForegroundBrush" Color="{DynamicResource WhiteColor}"
+                         Opacity="0.8" />
         <SolidColorBrush x:Key="ProgressBarBackgroundBrush" Color="{DynamicResource WhiteColor}"
                          Opacity="0.1" />
         <SolidColorBrush x:Key="DialogButtonPressedBrush" Color="{DynamicResource DarkOrangeColor}" />

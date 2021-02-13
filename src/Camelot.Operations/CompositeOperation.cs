@@ -7,18 +7,17 @@ using System.Threading.Tasks;
 using Camelot.Extensions;
 using Camelot.Operations.Models;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Exceptions;
 using Camelot.Services.Abstractions.Extensions;
 using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.Services.Abstractions.Models.EventArgs;
 using Camelot.Services.Abstractions.Models.Operations;
 using Camelot.Services.Abstractions.Operations;
-using Camelot.TaskPool.Interfaces;
 
 namespace Camelot.Operations
 {
     public class CompositeOperation : OperationBase, ICompositeOperation
     {
-        private readonly ITaskPool _taskPool;
         private readonly IFileNameGenerationService _fileNameGenerationService;
         private readonly IReadOnlyList<OperationGroup> _groupedOperationsToExecute;
 
@@ -27,6 +26,8 @@ namespace Camelot.Operations
         private readonly object _blockedFileLocker;
 
         private int _finishedOperationsCount;
+        private int _currentOperationsGroupIndex;
+        private int _operationsGroupsCount;
         private IReadOnlyList<IInternalOperation> _currentOperationsGroup;
         private int _totalOperationsCount;
         private CancellationTokenSource _cancellationTokenSource;
@@ -40,12 +41,10 @@ namespace Camelot.Operations
         public event EventHandler<EventArgs> Blocked;
 
         public CompositeOperation(
-            ITaskPool taskPool,
             IFileNameGenerationService fileNameGenerationService,
             IReadOnlyList<OperationGroup> groupedOperationsToExecute,
             OperationInfo operationInfo)
         {
-            _taskPool = taskPool;
             _fileNameGenerationService = fileNameGenerationService;
             _groupedOperationsToExecute = groupedOperationsToExecute;
             Info = operationInfo;
@@ -114,10 +113,16 @@ namespace Camelot.Operations
             var cancellationToken = _cancellationTokenSource.Token;
 
             _totalOperationsCount = groupedOperationsToExecute.Sum(g => g.Count);
+            _operationsGroupsCount = groupedOperationsToExecute.Count;
 
             foreach (var operationsGroup in groupedOperationsToExecute)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+
+                if (!operationsGroup.Any())
+                {
+                    continue;
+                }
 
                 _taskCompletionSource = new TaskCompletionSource<bool>();
 
@@ -131,12 +136,24 @@ namespace Camelot.Operations
                     var currentOperation = operationsGroup[i];
                     SubscribeToEvents(currentOperation);
 
-                    await _taskPool.ExecuteAsync(() => currentOperation.RunAsync(cancellationToken));
+                    RunOperation(currentOperation, cancellationToken);
                 }
 
-                await _taskCompletionSource.Task;
+                var groupExecutionResult = await _taskCompletionSource.Task;
+                if (!groupExecutionResult)
+                {
+                    throw new OperationFailedException();
+                }
+
+                _currentOperationsGroupIndex++;
             }
+
+            _currentOperationsGroup = null;
+            SetFinalProgress();
         }
+
+        private static void RunOperation(IInternalOperation operation, CancellationToken cancellationToken) =>
+            Task.Run(() => operation.RunAsync(cancellationToken), cancellationToken).Forget();
 
         private async void OperationOnStateChanged(object sender, OperationStateChangedEventArgs e)
         {
@@ -158,7 +175,9 @@ namespace Camelot.Operations
                 var finishedOperationsCount = Interlocked.Increment(ref _finishedOperationsCount);
                 if (finishedOperationsCount == _currentOperationsGroup.Count)
                 {
-                    _taskCompletionSource.SetResult(true);
+                    var isSuccessful = !state.IsFailedOrCancelled();
+
+                    _taskCompletionSource.SetResult(isSuccessful);
                 }
             }
 
@@ -241,8 +260,15 @@ namespace Camelot.Operations
 
         private void UpdateProgress()
         {
-            // TODO: prev group?
-            CurrentProgress = _currentOperationsGroup.Sum(o => o.CurrentProgress) / _totalOperationsCount;
+            if (_currentOperationsGroup is null)
+            {
+                return;
+            }
+
+            var finishedOperationGroupsProgress = (double) _currentOperationsGroupIndex;
+            var currentOperationGroupProgress = _currentOperationsGroup.Sum(o => o.CurrentProgress) / _totalOperationsCount;
+
+            CurrentProgress = (finishedOperationGroupsProgress + currentOperationGroupProgress) / _operationsGroupsCount;
         }
     }
 }

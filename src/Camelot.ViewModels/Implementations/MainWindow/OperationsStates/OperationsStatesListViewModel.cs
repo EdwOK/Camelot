@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using ApplicationDispatcher.Interfaces;
+using Camelot.Avalonia.Interfaces;
 using Camelot.Extensions;
 using Camelot.Services.Abstractions.Extensions;
 using Camelot.Services.Abstractions.Models.Enums;
 using Camelot.Services.Abstractions.Models.EventArgs;
 using Camelot.Services.Abstractions.Operations;
+using Camelot.ViewModels.Configuration;
 using Camelot.ViewModels.Factories.Interfaces;
 using Camelot.ViewModels.Implementations.Dialogs;
 using Camelot.ViewModels.Implementations.Dialogs.NavigationParameters;
@@ -16,24 +17,23 @@ using Camelot.ViewModels.Implementations.Dialogs.Results;
 using Camelot.ViewModels.Interfaces.MainWindow.OperationsStates;
 using Camelot.ViewModels.Services.Interfaces;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
 {
     public class OperationsStatesListViewModel : ViewModelBase, IOperationsStateViewModel
     {
-        private const int MaximumFinishedOperationsCount = 10;
-
         private readonly IOperationsStateService _operationsStateService;
         private readonly IOperationStateViewModelFactory _operationStateViewModelFactory;
         private readonly IApplicationDispatcher _applicationDispatcher;
         private readonly IDialogService _dialogService;
+        private readonly OperationsStatesConfiguration _configuration;
 
         private readonly ObservableCollection<IOperationStateViewModel> _activeOperations;
         private readonly Queue<IOperationStateViewModel> _finishedOperationsQueue;
         private readonly IDictionary<IOperation, IOperationStateViewModel> _operationsViewModelsDictionary;
 
         private int _totalProgress;
-        private bool _areAnyOperationsAvailable;
 
         public int TotalProgress
         {
@@ -45,11 +45,8 @@ namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
             }
         }
 
-        public bool AreAnyOperationsAvailable
-        {
-            get => _areAnyOperationsAvailable;
-            set => this.RaiseAndSetIfChanged(ref _areAnyOperationsAvailable, value);
-        }
+        [Reactive]
+        public bool AreAnyOperationsAvailable { get; set; }
 
         public bool IsInProgress => TotalProgress > 0 && TotalProgress < 100;
 
@@ -61,15 +58,17 @@ namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
             IOperationsStateService operationsStateService,
             IOperationStateViewModelFactory operationStateViewModelFactory,
             IApplicationDispatcher applicationDispatcher,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            OperationsStatesConfiguration configuration)
         {
             _operationsStateService = operationsStateService;
             _operationStateViewModelFactory = operationStateViewModelFactory;
             _applicationDispatcher = applicationDispatcher;
             _dialogService = dialogService;
+            _configuration = configuration;
 
             _activeOperations = new ObservableCollection<IOperationStateViewModel>();
-            _finishedOperationsQueue = new Queue<IOperationStateViewModel>(MaximumFinishedOperationsCount);
+            _finishedOperationsQueue = new Queue<IOperationStateViewModel>(_configuration.MaximumFinishedOperationsCount);
             _operationsViewModelsDictionary = new ConcurrentDictionary<IOperation, IOperationStateViewModel>();
 
             SubscribeToEvents();
@@ -112,7 +111,7 @@ namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
 
         private void AddFinishedOperationViewModel(IOperationStateViewModel stateViewModel)
         {
-            if (_finishedOperationsQueue.Count == MaximumFinishedOperationsCount)
+            if (_finishedOperationsQueue.Count == _configuration.MaximumFinishedOperationsCount)
             {
                 _finishedOperationsQueue.Dequeue();
             }
@@ -140,7 +139,11 @@ namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
         {
             if (operation.State.IsCompleted())
             {
-                _applicationDispatcher.Dispatch(() => RemoveOperation(operation));
+                _applicationDispatcher.Dispatch(() =>
+                {
+                    RemoveOperation(operation);
+                    UpdateProgress();
+                });
             }
 
             if (operation.State == OperationState.Blocked)
@@ -151,7 +154,10 @@ namespace Camelot.ViewModels.Implementations.MainWindow.OperationsStates
             // TODO: change status
         }
 
-        private void OperationOnProgressChanged(object sender, OperationProgressChangedEventArgs e)
+        private void OperationOnProgressChanged(object sender, OperationProgressChangedEventArgs e) =>
+            UpdateProgress();
+
+        private void UpdateProgress()
         {
             var activeOperations = GetActiveOperations();
             if (!activeOperations.Any())

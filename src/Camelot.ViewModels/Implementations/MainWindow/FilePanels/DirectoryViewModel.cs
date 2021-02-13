@@ -1,4 +1,5 @@
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Archive;
 using Camelot.Services.Abstractions.Behaviors;
 using Camelot.Services.Abstractions.Operations;
 using Camelot.ViewModels.Interfaces.Behaviors;
@@ -17,14 +18,24 @@ namespace Camelot.ViewModels.Implementations.MainWindow.FilePanels
             IClipboardOperationsService clipboardOperationsService,
             IFilesOperationsMediator filesOperationsMediator,
             IFileSystemNodePropertiesBehavior fileSystemNodePropertiesBehavior,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            ITrashCanService trashCanService,
+            IArchiveService archiveService,
+            ISystemDialogService systemDialogService,
+            IOpenWithApplicationService openWithApplicationService,
+            IPathService pathService)
             : base(
                 fileSystemNodeOpeningBehavior,
                 operationsService,
                 clipboardOperationsService,
                 filesOperationsMediator,
                 fileSystemNodePropertiesBehavior,
-                dialogService)
+                dialogService,
+                trashCanService,
+                archiveService,
+                systemDialogService,
+                openWithApplicationService,
+                pathService)
         {
 
         }

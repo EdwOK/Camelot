@@ -1,5 +1,7 @@
 ﻿using System.Windows.Input;
 using Camelot.ViewModels.Interfaces.MainWindow;
+using Camelot.ViewModels.Interfaces.MainWindow.Directories;
+using Camelot.ViewModels.Interfaces.MainWindow.Drives;
 using Camelot.ViewModels.Interfaces.MainWindow.FilePanels;
 using Camelot.ViewModels.Interfaces.MainWindow.OperationsStates;
 using Camelot.ViewModels.Interfaces.Menu;
@@ -11,6 +13,9 @@ namespace Camelot.ViewModels.Implementations
     public class MainWindowViewModel : ViewModelBase
     {
         private readonly IFilesOperationsMediator _filesOperationsMediator;
+
+        private ITabsListViewModel ActiveTabsListViewModel =>
+            _filesOperationsMediator.ActiveFilesPanelViewModel.TabsListViewModel;
 
         public IOperationsViewModel OperationsViewModel { get; }
 
@@ -24,9 +29,17 @@ namespace Camelot.ViewModels.Implementations
 
         public ITopOperationsViewModel TopOperationsViewModel { get; }
 
+        public IDrivesListViewModel DrivesListViewModel { get; }
+
+        public IFavouriteDirectoriesListViewModel FavouriteDirectoriesListViewModel { get; }
+
         public ICommand CreateNewTabCommand { get; }
 
         public ICommand CloseCurrentTabCommand { get; }
+
+        public ICommand SearchCommand { get; }
+
+        public ICommand SwitchPanelCommand { get; }
 
         public MainWindowViewModel(
             IFilesOperationsMediator filesOperationsMediator,
@@ -35,7 +48,9 @@ namespace Camelot.ViewModels.Implementations
             IFilesPanelViewModel rightFilesPanelViewModel,
             IMenuViewModel menuViewModel,
             IOperationsStateViewModel operationsStateViewModel,
-            ITopOperationsViewModel topOperationsViewModel)
+            ITopOperationsViewModel topOperationsViewModel,
+            IDrivesListViewModel drivesListViewModel,
+            IFavouriteDirectoriesListViewModel favouriteDirectoriesListViewModel)
         {
             _filesOperationsMediator = filesOperationsMediator;
 
@@ -45,16 +60,23 @@ namespace Camelot.ViewModels.Implementations
             MenuViewModel = menuViewModel;
             OperationsStateViewModel = operationsStateViewModel;
             TopOperationsViewModel = topOperationsViewModel;
+            DrivesListViewModel = drivesListViewModel;
+            FavouriteDirectoriesListViewModel = favouriteDirectoriesListViewModel;
 
             CreateNewTabCommand = ReactiveCommand.Create(CreateNewTab);
-            CloseCurrentTabCommand = ReactiveCommand.Create(CloseCurrentTab);
+            CloseCurrentTabCommand = ReactiveCommand.Create(CloseActiveTab);
+            SearchCommand = ReactiveCommand.Create(Search);
+            SwitchPanelCommand = ReactiveCommand.Create(SwitchPanel);
 
-            // TODO: from settings
             filesOperationsMediator.Register(leftFilesPanelViewModel, rightFilesPanelViewModel);
         }
 
-        private void CreateNewTab() => _filesOperationsMediator.ActiveFilesPanelViewModel.CreateNewTab();
+        private void CreateNewTab() => ActiveTabsListViewModel.CreateNewTab();
 
-        private void CloseCurrentTab() => _filesOperationsMediator.ActiveFilesPanelViewModel.CloseActiveTab();
+        private void CloseActiveTab() => ActiveTabsListViewModel.CloseActiveTab();
+
+        private void Search() => _filesOperationsMediator.ToggleSearchPanelVisibility();
+
+        private void SwitchPanel() => _filesOperationsMediator.InactiveFilesPanelViewModel.Activate();
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Camelot.Services.Abstractions;
+using Camelot.Services.Abstractions.Drives;
 using Camelot.Services.Abstractions.Operations;
 using Camelot.Services.AllPlatforms;
 using Camelot.Services.Environment.Interfaces;
@@ -12,21 +13,27 @@ namespace Camelot.Services.Mac
         private readonly IPathService _pathService;
         private readonly IFileService _fileService;
         private readonly IEnvironmentService _environmentService;
+        private readonly IDirectoryService _directoryService;
+        private readonly IHomeDirectoryProvider _homeDirectoryProvider;
 
         public MacTrashCanService(
-            IDriveService driveService,
+            IMountedDriveService mountedDriveService,
             IOperationsService operationsService,
             IPathService pathService,
             IFileService fileService,
-            IEnvironmentService environmentService)
-            : base(driveService, operationsService, pathService, fileService)
+            IEnvironmentService environmentService,
+            IDirectoryService directoryService,
+            IHomeDirectoryProvider homeDirectoryProvider)
+            : base(mountedDriveService, operationsService, pathService)
         {
             _pathService = pathService;
             _fileService = fileService;
             _environmentService = environmentService;
+            _directoryService = directoryService;
+            _homeDirectoryProvider = homeDirectoryProvider;
         }
 
-        protected override IReadOnlyCollection<string> GetTrashCanLocations(string volume)
+        protected override IReadOnlyList<string> GetTrashCanLocations(string volume)
         {
             var directories = new List<string>();
             if (volume != "/")
@@ -44,16 +51,13 @@ namespace Camelot.Services.Mac
         protected override Task WriteMetaDataAsync(IReadOnlyDictionary<string, string> filePathsDictionary,
             string trashCanLocation) => Task.CompletedTask;
 
-        protected override string GetUniqueFilePath(string file, HashSet<string> filesSet, string directory)
+        protected override string GetUniqueFilePath(string fileName, HashSet<string> filesNamesSet, string directory)
         {
-            // TODO: move to move operation
-            var filePath = _pathService.Combine(directory, _pathService.GetFileName(file));
-            if (!filesSet.Contains(filePath))
+            var filePath = _pathService.Combine(directory, fileName);
+            if (!filesNamesSet.Contains(filePath) && !CheckIfExists(filePath))
             {
                 return filePath;
             }
-
-            var fileName = _pathService.GetFileName(file);
 
             string result;
             var i = 1;
@@ -62,18 +66,21 @@ namespace Camelot.Services.Mac
                 var newFileName = $"{fileName} ({i})";
                 result = _pathService.Combine(directory, newFileName);
                 i++;
-            } while (filesSet.Contains(result) || _fileService.CheckIfExists(result));
+            } while (filesNamesSet.Contains(result) || CheckIfExists(result));
 
             return result;
         }
 
+        private bool CheckIfExists(string nodePath) =>
+            _fileService.CheckIfExists(nodePath) || _directoryService.CheckIfExists(nodePath);
+
         private string GetHomeTrashCanPath()
         {
-            var home = _environmentService.GetEnvironmentVariable("HOME");
+            var homeDirectoryPath = _homeDirectoryProvider.HomeDirectoryPath;
 
-            return $"{home}/.Trash";
+            return _pathService.Combine(homeDirectoryPath, ".Trash");
         }
 
-        private static string GetVolumeTrashCanPath(string volume) => $"{volume}/.Trashes";
+        private string GetVolumeTrashCanPath(string volume) => _pathService.Combine(volume, ".Trashes");
     }
 }

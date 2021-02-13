@@ -6,7 +6,7 @@
         xmlns:dialogs="clr-namespace:Camelot.ViewModels.Implementations.Dialogs;assembly=Camelot.ViewModels"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="Camelot.Views.Dialogs.CreateDirectoryDialog"
-        Width="400" Height="150"
+        Width="400" Height="200"
         Title="{x:Static p:Resources.CreateDirectoryTitle}">
 
     <Design.DataContext>
@@ -15,7 +15,10 @@
 
     <Grid RowDefinitions="Auto,Auto,Auto" Margin="10" HorizontalAlignment="Center">
         <TextBlock Classes="dialogTextBlock" Text="{x:Static p:Resources.EnterDirectoryNameWithColon}" />
-        <TextBox Grid.Row="1" x:Name="DirectoryNameTextBox" Text="{Binding DirectoryName}" />
+
+        <TextBox Grid.Row="1" x:Name="NodeNameTextBox" Text="{Binding DirectoryName}"
+                 KeyUp="OnNodeNameTextBoxKeyUp" />
+
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center">
             <Button Classes="dialogButton transparentDialogButton" Content="{x:Static p:Resources.Cancel}" Command="{Binding CancelCommand}" />
             <Button Classes="dialogButton" Content="{x:Static p:Resources.Create}" Command="{Binding CreateCommand}" />

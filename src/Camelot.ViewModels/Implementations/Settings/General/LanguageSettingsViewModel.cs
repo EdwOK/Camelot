@@ -3,8 +3,9 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Camelot.Services.Abstractions;
 using Camelot.Services.Abstractions.Models;
+using Camelot.Services.Abstractions.Models.State;
 using Camelot.ViewModels.Interfaces.Settings;
-using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 
 namespace Camelot.ViewModels.Implementations.Settings.General
 {
@@ -13,17 +14,13 @@ namespace Camelot.ViewModels.Implementations.Settings.General
         private readonly ILocalizationService _localizationService;
         private readonly ILanguageManager _languageManager;
 
-        private LanguageModel _currentLanguage;
         private LanguageModel _initialLanguage;
         private ObservableCollection<LanguageModel> _languages;
 
         private bool _isActivated;
 
-        public LanguageModel CurrentLanguage
-        {
-            get => _currentLanguage;
-            set => this.RaiseAndSetIfChanged(ref _currentLanguage, value);
-        }
+        [Reactive]
+        public LanguageModel CurrentLanguage { get; set; }
 
         public IEnumerable<LanguageModel> Languages => _languages;
 
@@ -51,15 +48,24 @@ namespace Camelot.ViewModels.Implementations.Settings.General
             var savedLanguage = _localizationService.GetSavedLanguage();
             var currentLanguage = _languageManager.CurrentLanguage;
 
-            var languageCode = savedLanguage != null ? savedLanguage.Code : currentLanguage.Code;
+            var languageCode = savedLanguage is null ? currentLanguage.Code : savedLanguage.Code;
             CurrentLanguage = _initialLanguage = GetLanguageOrDefault(languageCode);
         }
 
         public void SaveChanges()
         {
             _languageManager.SetLanguage(CurrentLanguage);
-            _localizationService.SaveLanguage(CurrentLanguage);
+
+            var languageStateModel = GetLanguageStateModel();
+            _localizationService.SaveLanguage(languageStateModel);
         }
+
+        private LanguageStateModel GetLanguageStateModel() =>
+            new LanguageStateModel
+            {
+                Code = CurrentLanguage.Code,
+                Name = CurrentLanguage.Name
+            };
 
         private LanguageModel GetLanguageOrDefault(string languageCode)
             => Languages.SingleOrDefault(l => l.Code == languageCode) ?? _languageManager.DefaultLanguage;
