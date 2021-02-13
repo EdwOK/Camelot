@@ -14,26 +14,9 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.101
-    - name: Setup MSBuild
-      if: matrix.os == 'windows-latest'
-      uses: microsoft/setup-msbuild@v1.0.2
-    - name: Setup .NET Framework 3.5
-      if: matrix.os == 'windows-latest'
-      shell: pwsh
-      run: Install-WindowsFeature Net-Framework-Core
-    - name: Setup Wix Toolset
-      if: matrix.os == 'windows-latest'
-      run: |
-        curl -OLS https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe
-        ./wix311.exe /install /quiet /norestart
     - name: Install dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --configuration Release --no-restore
-    - name: Build Installer
-      if: matrix.os == 'windows-latest'
-      run: |
-        cd src/Camelot.Install
-        msbuild -p:Configuration=Release -p:platform=x64
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity normal
